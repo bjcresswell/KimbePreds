@@ -1,0 +1,290 @@
+---
+title: "Kimbe Predator Fish Abundance"
+author: "Ben Cresswell"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+ html_document:
+    code_folding: show
+    collapse: no
+    df_print: paged
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 4
+    highlight: textmate
+    theme: spacelab
+    toc: yes
+    toc_float: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+# Introduction
+This document analyses predator fish abundance from the Kimbe Bay video survey data set.
+Last edit: 30 Aug 2021 BJC
+
+# Packages and housekeeping
+```{r packages, include=FALSE, eval=TRUE}
+library(gridExtra) #for plotting
+library(gt)
+library(lme4)      #basic model builder
+library(car)       #for regression diagnostics
+library(multcomp)  #for lm work
+library(broom)     #for tidy output
+library(ggfortify) #for model diagnostics
+library(DHARMa)    #for residual diagnostics
+library(performance)
+library(glmmTMB)   #for wider selection of error families
+library(sjPlot)    #for outputs
+library(effects)   #for partial effects plots
+library(ggeffects) #for partial effects plots
+library(emmeans)   #for estimating marginal means
+library(modelr)    #for auxiliary modeling functions
+library(artyfarty) #for plotting
+library(tidyverse) #for data wrangling
+```
+
+
+# Data import and wrangling
+
+## Rmd setup, directory selection (Note: you need to run this code in knitr not in isolation otherwise won't work)
+```{r setup, include=TRUE, warnings=FALSE, message=FALSE}
+knitr::opts_chunk$set(root.dir = "~/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/code", echo = TRUE)
+getwd()
+```
+
+## Basic data wrangling: Loads fish DOV data from both survey periods (2018 and 2019) and extracts just predator observations:
+```{r diw-chunk, include=FALSE}
+source("../pred_diw.R", local = knitr::knit_global())
+```
+
+
+## Basic abundance calculations on the predator data frame
+```{r diw-abun-chunk, include=FALSE}
+source("pred_abun_diw.R", local = knitr::knit_global())
+```
+
+
+## Variables:
+Modelling predator abundance (response variable) against reef type (fixed effect predictor variable), with site as a random effect:
+
+1. Numbers of predators (response variable): This is count data and needs to be scaled against total fish assemblage size, so could convert into a proportion (0-1) but instead we'll scale inside the model using offset().
+2. Reef type (predictor variable (fixed effect)): Factor with 3 'levels'.
+3. Site (nested random effect): 4 sites per reef type, 12 total.
+4. Numbers of fish (scaling variable): Need to scale the model to account for total fish numbers
+
+Note: Initially thought about including survey period as a fully crossed random effect, however there are only two levels within this variable making any variance partitioning meaningless (can't have variance between 2 observations - generally considered that 5 is the minimum). In theory could include as a fixed effect, however we are not really interested in it as a predictor and want to maintain model parsimony!
+
+
+## Basic data exploration
+Using predsum, check how the data are distributed across the different reefs and reef types
+```{r abun-eda}
+# Direct from script
+#source("code/2.pred_abun_eda.R")
+#source("code/2.pred_abun_eda.R", local = knitr::knit_global())
+
+# Or:
+
+# Histogram 
+hist <- ggplot(predsum, aes(x=No_Preds)) + 
+  scale_y_continuous(limits = c(0,120), "Observations") +
+  #scale_x_binned("No. of predators")+
+  geom_histogram(binwidth=50, color="black", fill="grey")
+
+# Compare sites:
+(predreeftypestats <- predsum %>% 
+  group_by(Reeftype) %>% 
+  summarise_each(funs(mean,sd,se=sd(.)/sqrt(n())), No_Preds))
+
+rtbar <- ggplot(predreeftypestats, aes(x=Reeftype, y=mean))+
+  geom_bar(stat="identity", position="dodge", color="black")+
+  scale_y_continuous(limits = c(0,90), "Mean predator count (±SE)")+
+  scale_x_discrete("Reef type and survey period")+
+  labs(title="Predator abundance by reef type")+
+  scale_fill_viridis_d()+
+  theme_scientific()+
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.2, position=position_dodge(.9))+
+  theme(legend.key.size = unit(0.4, "cm"))+
+  theme(plot.title = element_text(size = 14, face = "bold"),
+        legend.title=element_text(size=9), 
+        legend.text=element_text(size=8),
+        axis.title.y = element_text(size=10, face="bold"),
+        axis.title.x = element_text(size=10, face="bold"),
+        axis.text = element_text(size=6))
+grid.arrange(hist, rtbar, ncol=2)
+```
+- Lots of zeros so perhaps will need a ZI term in the model. These are count data so expecting Poisson or neg binom distributions to work best.
+- Predator abundance high on pinnacles where we exclusively recorded the large schools of pelagic/semi-pelagic fishes (in particular S. qenie). Could look at transforming or adjusting the data, treating these as outliers and excluding.  However, these observations may be ecologically important and the right GLMM error-family should handle these data.  
+
+## Fit models
+Basic GLMM with site as random factor. Will introduce offset later on.
+Trialled other error families but all poor fit: Gaussian, Poisson, Gamma, Beta (on %) etc
+
+# Model formulas
+```{r abun-model-fit}
+# Neg binom 2 (Neg binom 1 poor fit)
+pred.glmmnb <- glmmTMB(No_Preds~Reeftype+(1|SiteCode), data=predsum, family=nbinom2())  
+# ZI (on neg binom 2)
+pred.glmmzi <- glmmTMB(No_Preds~Reeftype+(1|SiteCode), data=predsum, family=nbinom2(), ziformula=~1)
+# Tweedie
+pred.glmmt <- glmmTMB(No_Preds~Reeftype+(1|SiteCode), data=predsum, family=tweedie())  
+```
+
+# Source code for all models trialled if required (model comparisons etc)
+```{r abun-model-source}
+# source("3a.pred_abun_model.R", local = knitr::knit_global())
+```
+
+##  Model diagnostics 
+
+# DHARMa residuals:
+```{r abun-model-diag}
+nb.resid <- simulateResiduals(pred.glmmnb, plot=T) # 
+zi.resid <- simulateResiduals(pred.glmmzi, plot=T) #
+t.resid <- simulateResiduals(pred.glmmt, plot=T) # 
+```
+-> All look ok apart from overdispersion
+
+# Binned residuals:
+```{r abun-binresid}
+binned_residuals(pred.glmmnb) # 100% inside error bounds
+binned_residuals(pred.glmmzi) # 100% inside error bounds
+binned_residuals(pred.glmmt) # 100% inside error bounds
+```
+
+# Validation with AIC
+```{r abun-aic1}
+AIC(pred.glmmnb, pred.glmmzi, pred.glmmt)
+```
+-> NB model best and most parsimonious fit, but will check for zero inflation on that model
+
+# ZI interrogation
+```{r abun-nb-zicheck}
+testZeroInflation(pred.glmmnb)
+```
+# ZI test output
+data:  simulationOutput
+ratioObsSim = 0.73892, p-value = 0.24
+alternative hypothesis: two.sided
+-> Plot shows that we are actually getting slightly fewer zeros than expected and the output quantifies this: 74% of zeros expected (non significant)
+
+# Can also interrogate the ZI model using summary()
+```{r zi-sum}
+summary(pred.glmmzi)
+```
+# Manual calculation of probability and/or odds of a false zero
+## Use plogis to transform the ZI estimate:
+plogis(-21.2)= 6.2e-10 -> almost no chance that any of these zeros are false
+exp(-21.2) -> and corresponding almost no odds that any zeros false either
+
+
+# Model interrogation
+```{r abun-nb-eda}
+emmeans(pred.glmmnb, pairwise~Reeftype, transform="response") %>% 
+  confint()
+```
+-> So emmeans suggest that pinnacles have more predators than both offshore emergent and near shore reefs, but that this is highly variable.  What about if we take into account overall numbers of fishes?
+
+
+# Model tweaking
+Now going to add the offset (against total numers of fishes in assemblage)
+On log() scale as that is the link scale
+```{r abun-nb-offset, message=FALSE, }
+pred.glmmnboff <- update(pred.glmmnb, ~ . + offset(log(No_Fish)))
+```
+
+
+# Revalidation with AIC
+```{r abun-aic2}
+AIC(pred.glmmnb,  pred.glmmnboff)
+```
+-> Improved fit for offset model
+
+
+# Check summary
+```{r abun-model-summary}
+summary(pred.glmmnboff)
+```
+
+# Results (emmeans and contrasts on response scale - numbers of predators)
+```{r abun-emmeans-results}
+# R2 if you want but not very useful for glmm
+#library(performance)
+#performance::r2(pred.glmmnboff)
+
+# emmeans and contrasts first
+abuncontrasts <- emmeans(pred.glmmnboff, pairwise ~ Reeftype, transform='response', combine=TRUE) %>%
+  confint() %>% 
+  as.data.frame() 
+
+# pvalues
+abunpvals <- emmeans(pred.glmmnboff,  ~ Reeftype, transform='response', combine=TRUE) %>% 
+  pairs() %>% 
+  as.data.frame() 
+  
+# Combine for full results table
+abunresults <- bind_cols(abuncontrasts, abunpvals[5:6]) 
+
+# Write to csv
+write_csv(abunresults, file = "../../output/rtables/abunresults.csv")
+
+# Copy to html
+abunresults %>% 
+  tab_df(file="../../output/rtables/abunresults.html", title = "Abundance contrasts (estimates)") #%>% 
+
+# Display inline
+abunresults
+```
+
+
+
+# Can also check ratios (using type="response"):
+```{r abun-emmeans-ratios}
+
+# Ratios with CI
+abunratios <- emmeans(pred.glmmnboff, pairwise ~ Reeftype, type='response', combine=TRUE) %>%
+  confint() %>% 
+  as.data.frame()
+
+# p values
+abunratiopvals <- emmeans(pred.glmmnboff,  ~ Reeftype, type='response', combine=TRUE) %>% 
+  pairs() %>% 
+  as.data.frame() 
+
+# Combine
+abunratios <- bind_cols(abunratios, abunratiopvals[6:7]) 
+
+# Write to csv
+write_csv(abunratios, file = "../../output/rtables/abunratios.csv")
+
+# Copy to html 
+abunratios %>% 
+  tab_df(file="../../output/rtables/abunratios.html", title = "Abundance contrasts (ratios)")
+abunratios
+
+```
+
+## So, taking into account overall fish abundance, pinnacles have significanly more predators on them than either offshore or near shore (11 more per 150m^2 transect)  (12 more per 150m^2 transect) reefs, but this is highly variable (confints)
+
+# Create plot data
+Final step is to create the df to be used for plot making 
+```{r abun-plot-data}
+abunplotdata <- emmeans(pred.glmmnboff, pairwise ~ Reeftype, transform='response') %>%
+  confint() %>% 
+  as_tibble() 
+
+
+save(abunplotdata, file='../../data/abunplotdata.RData')
+```
+
+
+
+
+
+```{r run-whole-script-chunk, include=TRUE, warnings=FALSE, message=FALSE}
+# Run this chunk to execute whole script without procucing html output
+```
+
+
+
+
+

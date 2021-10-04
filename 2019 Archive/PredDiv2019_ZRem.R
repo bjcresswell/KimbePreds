@@ -7,40 +7,36 @@
 rm(list=ls())
 dev.off()
 
+
 # Set working directory
-setwd("~/Science & Education/Ben PhD/Data/Pred Div Analysis")
+setwd("~/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds")
+getwd()
+
 
 # Install relevant packages (gdata, vegan etc)
-require(gdata)
-require(vegan)
-require(ggplot2)
-require(dplyr)
-require(ape)
-require(BiodiversityR)
-
-install.packages("BiodiversityR")
-
-
-library(BiodiversityR)
-
-library("tcltk2")
-help(BiodiversityR)
+library(gdata)
+library(vegan)
+library(tidyverse)
+library(ape)
+#library(BiodiversityR)
 
 
 # Load file
-pd <- read.csv("PredVeganAll.csv", header = T)
+pd <- read.csv("data/PredVeganAll.csv")
 pdrestore <- pd
 # Set the row names as per column 1 and then remove unnecessary columns:
-rownames(pd) = pd[,1]
-pd <- pd[,4:43]
-# To remove transects with all zero entries
-pd <- pd[rowSums(pd==0, na.rm=TRUE)<ncol(pd), ]
+pd <- pd %>% 
+  column_to_rownames(var='TRANSECT') %>% 
+  select(!c(SITE, REEFTYPE))
 
+# To remove transects with all zero entries
+pdz <- pd[rowSums(pd==0, na.rm=TRUE)<ncol(pd), ]
+pd
 # Create df with details of survey parameters (need this for ANOSIM later)
 pdenv <- data.frame("Site" = 1, "ReefType" = 1:51)
 pdenv$ReefType <- "Nearshore"
 pdenv$ReefType[14:31] <- "Offshore"
-pdenv$ReefType[32:51] <- "Sea Mount"
+pdenv$ReefType[32:51] <- "Pinnacle"
 pdenv$Site <- c(rep("DONN",4), rep("SUSA",4), rep("MADA", 3), rep("LADI", 2),
                 rep("OTTO",5), rep("HOGU",4), rep("EMAS",5), rep("KIIS",4),
                 rep("BRAD",5), rep("KIBO",5), rep("INGL",5), rep("JOEL",5))
@@ -52,8 +48,9 @@ summary(pdenv)
 
 # Data exploration via hierarchical cluster analysis
 #Run vegdist
-pdveg <- vegdist(pd)
-pdveg
+pdzveg <- vegdist(pdz)
+
+tail(pdveg)
 dist.zeroes(pd,vegdist)
 
 pdveg <- (pdveg, na.)

@@ -1,0 +1,144 @@
+---
+title: "Kimbe Bay Coral Reef Predator Fish Diversity"
+author: "Ben Cresswell"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+ html_document:
+    code_folding: show
+    collapse: no
+    df_print: paged
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 4
+    highlight: textmate
+    theme: spacelab
+    toc: yes
+    toc_float: yes
+editor_options: 
+  chunk_output_type: inline
+---
+Rmd created: 17.9.2021
+Last edit: 17.9.2021 BJC
+
+
+# Introduction
+This Rmd brings together the analyses of predator fish community composition from the Kimbe Bay video survey data set.
+Analyses are broken down into steps:
+
+1. Testing for differences in community composition across reef types using a multivariate GLM with PIT-trap resampling to account for the random effect of "site".
+2. A bar plot to visualise and compare differences across reef types for the most abundant taxa
+3. A venn diagram to show broad patterns in overlapping vs unique taxa across reef types
+4. A PCA to further visualise diff in community composition. Ordination conducted with a log-transform of the raw count data to bring into line with manyglm above
+
+
+# Housekeeping, Rmd setup, directory selection (don't need packages as these are loaded within the relevant scripts)
+```{r setup, include=FALSE, warnings=FALSE, message=FALSE}
+knitr::opts_chunk$set(root.dir = "~/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/code/PredDiversity", echo = TRUE)
+rm(list=ls())
+graphics.off()
+```
+
+
+
+# 1. Multivariate GLM and ANOVA
+```{r pred-comm-manyglm, include=TRUE, warnings=FALSE, message=FALSE}
+# Model takes a long time to run so have saved.  To run entire manyglm script and re-run model:
+source("pred_mvabund.R", local = knitr::knit_global())
+
+# To load model:
+#load(file = "../../data/mvabundaov.rda")
+```
+
+# Results - multivariate
+```{r pred-comm-multi-contrasts, include=TRUE, warnings=FALSE, message=FALSE}
+# Results overview
+modelaovpairwise
+
+# Details - multivariate
+modsum <- modelaovpairwise$table 
+modsum # Can report as: "Significant effect of reef type on predator fish communities (LRT=507, P=0.02)
+modpairs <- modelaovpairwise$pairwise.comp.table 
+print(modpairs) # LRT pairwise comparisons - report results in table
+```
+
+# Results - univariate 
+```{r pred-comm-uni-contrasts, include=TRUE, warnings=FALSE, message=FALSE}
+
+#LRT details
+uniLRTs <- as.data.frame(t(modelaovpairwise$uni.test)) %>% 
+  rownames_to_column("Taxa") %>% 
+  dplyr::select("Taxa", `predenv$Reeftype`) %>% 
+  as_tibble() %>% 
+  mutate(LRT = `predenv$Reeftype`, .keep="unused")
+
+# p value details
+uniPvals <- as.data.frame(t(modelaovpairwise$uni.p)) %>% 
+  rownames_to_column("Taxa") %>% 
+  dplyr::select("Taxa", `predenv$Reeftype`) %>% 
+  as_tibble() %>% 
+  mutate(Pvals = `predenv$Reeftype`, .keep="unused")
+
+# Combine to one df
+unitests <- uniLRTs %>%
+  bind_cols(uniPvals[2]) %>% 
+  arrange(Pvals) %>% 
+  tibble()
+  
+unitests
+
+# Note: can't use emmeans as it can't handle a manyglm object
+
+# Save output
+#write_xlsx(unitests, "../../output/rtables/taxa_LRT_mvabund.xlsx")
+```
+
+So:
+
+1. Significant differences in community composition for all pairwise contrasts
+2. Just six taxa significantly contributing to these differences: 
+Caranx melampygus	            35.328545	0.002		
+Macolor macularis	            58.084211	0.002		
+Caranx sexfasciatus	          32.010575	0.006		
+Sphyraena qenie	              31.066156	0.006		
+Lutjanus gibbus             	23.605146	0.045		
+Cephalopholis cyanostigma	    22.144677	0.045
+
+
+# 2. Barplot
+```{r pred-comm-sigtaxa-abun-barplot}
+# Source from script
+source("pred_taxa_nos.R", local = knitr::knit_global())
+rtsigbar
+```
+
+
+# 3. Venn diagram - doesn't print to Rmd - can run script from source again if required:
+```{r pred-comm-venn, include=TRUE, warnings=FALSE, message=FALSE}
+# Source from script
+#source("pred_venndiag.R", local = knitr::knit_global())
+```
+
+
+# 4. PCA
+
+```{r pred-comm-PCA, include=TRUE, warnings=FALSE, message=FALSE}
+# Source from script
+source("pred_ordiplot_gg.R", local = knitr::knit_global())
+
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+

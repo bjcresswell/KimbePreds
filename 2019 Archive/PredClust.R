@@ -7,7 +7,7 @@ rm(list=ls())
 dev.off()
 
 # Set working directory
-setwd("~/Science & Education/Ben PhD/Data/Pred Div Analysis")
+setwd("~/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/2019 Archive")
 
 # Install relevant packages (gdata, vegan etc)
 require(gdata)
@@ -22,8 +22,11 @@ require(MASS)
 
 # Load file
 pd <- read.csv("PredVeganAll.csv", header = T)
+pd 
 
 # Set the row names as per column 1 and then remove unnecessary columns:
+
+
 rownames(pd) = pd[,1]
 pd <- pd[,4:43]
 # To restore to original if reqd:

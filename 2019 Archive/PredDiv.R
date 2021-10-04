@@ -13,6 +13,7 @@ library(dplyr)
 
 # Load file
 pd <- read.csv("PredVegan.csv", header = T)
+pd <- as.data.frame(PredVegan)
 
 # Set the row names as per column 1 and then remove unnecessary columns:
 rownames(pd) = pd[,1]

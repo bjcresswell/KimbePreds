@@ -1,0 +1,400 @@
+---
+title: "Kimbe Bay Coral Reef Predator Fish Diversity"
+author: "Ben Cresswell"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+ html_document:
+    code_folding: show
+    collapse: no
+    df_print: paged
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 4
+    highlight: textmate
+    theme: spacelab
+    toc: yes
+    toc_float: yes
+editor_options: 
+  chunk_output_type: inline
+---
+Rmd created: 2.7.2021
+Last edit: 31 Aug 2021 BJC
+
+
+# Introduction
+This document analyses predator fish community diversity from the Kimbe Bay video survey data set.
+Analyses are broken down into 2 broad components:
+
+1. Diversity metrics
+- This part models the effect of the predictor variable (reeftype) against 2 diversity metrics: Species richness and Shannon Weiner H (Simpsons excluded for reasons outline in div-diw script)
+
+2. Community analysis
+- This component runs a PCoA on the communities to assess multivariate differences between the 3 reeftypes. This is complemented with a vector analysis to see which taxa are most driving differences in community structure and also followed up with a SIMPER/PERMANOVA test (TBC). Community composition is simplified using a basic venn diagram to show overlapping/non-overlapping taxa.
+
+
+Rmd setup, directory selection
+```{r setup, include=FALSE, warnings=FALSE, message=FALSE}
+knitr::opts_chunk$set(root.dir = "~/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/code/PredDiversity", echo = TRUE)
+getwd()
+```
+
+
+# Packages and housekeeping
+```{r div-packages, include=FALSE, eval=TRUE}
+getwd()
+library(gridExtra) #for plotting
+library(gt)
+library(lme4)      #basic model builder
+library(car)       #for regression diagnostics
+library(multcomp)  #for lm work
+library(broom)     #for tidy output
+library(ggfortify) #for model diagnostics
+library(DHARMa)    #for residual diagnostics
+library(performance)
+library(glmmTMB)   #for wider selection of error families
+library(sjPlot)    #for outputs
+library(effects)   #for partial effects plots
+library(ggeffects) #for partial effects plots
+library(emmeans)   #for estimating marginal means
+library(modelr)    #for auxillary modelling functions
+library(artyfarty) #for plotting
+library(vegan)
+library(MuMIn)     #for pseudo R2
+library(tidyverse) #for data wrangling
+```
+
+
+# Data import and wrangling
+
+## Diversity data wrangling script
+Generates a master-diversity data frame which includes diversity metrics and a species matrix
+```{r pred-div-diw}
+source("pred_div_diw.R", local = knitr::knit_global())
+```
+
+
+# Basic data exploration
+Check how the data are distributed across the different reefs and reef types
+```{r div-eda}
+# Histograms
+# Species richness
+srhist <- ggplot(preddiv, aes(x=SpecNo)) + 
+  geom_histogram(binwidth=1, color="black", fill="grey") # Count data and looks poisson distributed
+# Shannon
+shhist <- ggplot(preddiv, aes(x=Shannon)) + 
+  geom_histogram(binwidth=0.1, color="black", fill="grey") # Possibly bimodal??
+# Simpson - not used, see below
+#sihist <- ggplot(data=subset(preddiv, Reeftype=='Nearshore'), aes(x=Simpson)) + 
+#  geom_histogram(binwidth=0.1, color="black", fill="grey") # No idea...
+
+# Boxplots - by reeftype
+# Richness
+srbox <- ggplot(preddiv, aes(x=Reeftype, y=SpecNo))+
+  geom_boxplot()
+# Shannon
+shbox <- ggplot(preddiv, aes(x=Reeftype, y=Shannon))+
+  geom_boxplot()
+# Simpson - not using as penalises highly abundant communities. See Ch 23 in Krebs
+
+grid.arrange(srhist, shhist, srbox, shbox, ncol=4)
+
+```
+- Species richness: Will start with Poisson and move to neg binom if doesn't work
+- Shannon: Will start with Gaussian, move to binom possibly. Looks like ZI?
+- Simpson: Not using.
+
+
+#  Models
+
+# 1. Species Richness
+
+Start with Poisson and Neg binom (Notes: REML=F returned better AIC. ZI test good on both so no ZI term in formulae)
+```{r rich-model-fit}
+# Poisson
+prglmmp <- glmmTMB(SpecNo ~ Reeftype+(1|Site), data = preddiv, family='poisson')
+# Neg binom
+prglmmnb <- glmmTMB(SpecNo ~ Reeftype+(1|Site), data = preddiv, family='nbinom2')
+```
+
+# Model diagnostics
+```{r rich-model-diag}
+# Poisson
+simulateResiduals(prglmmp, plot=T) # Looks good
+testZeroInflation(prglmmp) # No ZI
+binned_residuals(prglmmp) # 100% inside error bounds
+
+# Neg binom
+simulateResiduals(prglmmnb, plot=T) # Looks good
+testZeroInflation(prglmmnb) # No ZI
+binned_residuals(prglmmnb) # 100% inside error bounds
+```
+- Residuals for both models look ok.
+
+# Validation with AIC
+```{r rich-model-aic}
+AIC(prglmmp, prglmmnb)
+```
+- Poisson best fit
+
+# Summary (Poisson model)
+```{r rich-model-summary}
+summary(prglmmp)
+```
+
+
+```{r rich-model-R2}
+#r.squaredGLMM(prglmmp) # See ML section on this glmm_example1.Rmd - hard to interpret variance of random factors in GLMM
+```
+
+
+# Results: emmeans
+```{r rich-emmeans-trans}
+emmeans(prglmmp, pairwise~Reeftype, transform="response") %>% 
+  confint() #%>% 
+  as.data.frame() %>% 
+  tab_df()
+```
+# emmeans notes:
+- "Rate" is the reported term for a Poisson model (it's "response" for nb)
+- Results from neg binom very similar
+
+
+# Save emmeans and calculate ratios
+```{r rich-emmeans-results}
+# Need to convert to a tibble in the process to change the names of the contrasts (for plotting later):
+richcontrasts <- emmeans(prglmmp, pairwise ~ Reeftype, transform='response') %>%
+  confint() %>% 
+  as.data.frame()
+
+# pvalues
+richpvals <- emmeans(prglmmp,  ~ Reeftype, transform='response', combine=TRUE) %>% 
+  pairs() %>% 
+  as.data.frame() 
+  
+# Combine for full results table
+richresults <- bind_cols(richcontrasts, richpvals[5:6]) 
+
+# Write to csv
+write_csv(richresults, file = "../../output/rtables/richresults.csv")
+
+# Copy to html
+richresults %>% 
+  tab_df(file="../../output/rtables/richresults.html", title = "Species richness contrasts (estimates)") #%>% 
+
+# Display inline
+richresults
+```
+
+
+```{r rich-emmeans-ratios}
+richratios <- emmeans(prglmmp, pairwise ~ Reeftype, type='response') %>%
+  confint() %>% 
+  as.data.frame() 
+
+# p values
+richratiospvals <- emmeans(prglmmp,  ~ Reeftype, type='response', combine=TRUE) %>% 
+  pairs() %>% 
+  as.data.frame() 
+
+# Combine
+richratios <- bind_cols(richratios, richratiospvals[6:7]) 
+
+# Write to csv
+write_csv(richratios, file = "../../output/rtables/richratios.csv")
+
+# Copy to html 
+richratios %>% 
+  tab_df(file="../../output/rtables/richratios.html", title = "Abundance contrasts (ratios)")
+richratios
+```
+
+
+# Spp richness plot data
+```{r rich-plots}
+richplotdata <- emmeans(prglmmp, pairwise ~ Reeftype, transform='response') %>%
+  confint() %>% 
+  as_tibble() 
+
+save(richplotdata, file='../../data/richplotdata.RData')
+
+```
+
+#############################
+
+
+# 2. Shannon H' Diversity
+
+## Looks like it might be very zero-inflated so will probably need a Poisson or NegBinom family with ZI term
+In addition most error distributions won't work with these data including:
+- Gamma - has to be positive values (and very bad residuals when using on raw data + 0.0000001)
+- ziGamma - same
+- Beta - has to be  0 < y < 1
+- Binom - y values must be 0 <= y <= 1
+- Inverse gaussian - positive values only and wouldn't work on ShannonAdj
+- All quasi families
+- All truncated families
+
+## So am just fitting Poisson and NegBinom with and without ZI terms:
+```{r shan-model-fit}
+# Poisson
+pshan.glmmp <- glmmTMB(Shannon ~ Reeftype+(1|Site), data = preddiv, family=poisson)
+
+# ZIP
+pshan.glmmzip <- glmmTMB(Shannon ~ Reeftype+(1|Site), data = preddiv, family=poisson, ziformula = ~1)
+
+# Neg binom 2
+pshan.glmmnb2 <- glmmTMB(Shannon ~ Reeftype+(1|Site), data = preddiv, family='nbinom2')
+
+# ZINB
+pshan.glmmzinb <- glmmTMB(Shannon ~ Reeftype+(1|Site), data = preddiv, family="nbinom2", ziformula = ~1)
+
+```
+
+# Model diagnostics
+
+## Start with ZI test
+```{r shan-zit}
+# Poisson
+testZeroInflation(pshan.glmmp) # zero inflated
+
+# ZIP
+testZeroInflation(pshan.glmmzip) # zero inflated
+
+# Neg binom
+testZeroInflation(pshan.glmmnb2) # zero inflated
+
+# ZINB
+testZeroInflation(pshan.glmmzinb)
+```
+-> All have expected number of zeros or less
+
+
+```{r}
+simulateResiduals(pshan.glmmp, plot=T) 
+binned_residuals(pshan.glmmp) # 82% inside error bounds
+performance::check_model(pshan.glmmp) # OK
+
+simulateResiduals(pshan.glmmzip, plot=T) 
+binned_residuals(pshan.glmmzip) # 82% inside error bounds
+plot_grid(plot_model(pshan.glmmzip,  type='diag')[-2]) # Doesn't work 
+performance::check_model(pshan.glmmzip) # Not great
+
+simulateResiduals(pshan.glmmnb2, plot=T) # Similar to Poisson
+binned_residuals(pshan.glmmnb2) # 82% inside error bounds
+plot_grid(plot_model(pshan.glmmnb2,  type='diag')[-2]) # Doesn't work 
+performance::check_model(pshan.glmmnb2) # Not great
+
+simulateResiduals(pshan.glmmzinb, plot=T) # Similar to Poisson
+binned_residuals(pshan.glmmzinb) # 82% inside error bounds
+plot_grid(plot_model(pshan.glmmzinb,  type='diag')[-2]) # Doesn't work 
+performance::check_model(pshan.glmmzinb) # Not great
+
+```
+
+-> Some overdispersion in all fits but nothing too bad
+
+
+# Validation with AIC
+```{r shan-model-aic}
+AIC(pshan.glmmp, pshan.glmmzip, pshan.glmmnb2, pshan.glmmzinb)
+```
+-> Poisson best/most parsimonious fit
+
+ 
+# Summary (Poisson model)
+```{r shan-model-summary}
+summary(pshan.glmmp) # Variance from "site" very low
+```
+
+
+
+```{r shan-model-R2}
+#r.squaredGLMM(pshan.glmmp) # See ML section on this glmm_example1.Rmd - hard to interpret variance of random factors in GLMM
+#performance::r2(pshan.glmmp)
+```
+
+
+# Results (emmeans and contrasts on response scale - Shannon H)
+```{r shan-emmeans-results}
+# emmeans and contrasts first
+shancontrasts <- emmeans(pshan.glmmp, pairwise ~ Reeftype, transform='response', combine=TRUE) %>%
+  confint() %>% 
+  as.data.frame() 
+
+# pvalues
+shanpvals <- emmeans(pshan.glmmp,  ~ Reeftype, transform='response', combine=TRUE) %>% 
+  pairs() %>% 
+  as.data.frame() 
+
+# Combine for full results table
+shanresults <- bind_cols(shancontrasts, shanpvals[5:6]) 
+
+# Write to csv
+write_csv(shanresults, file = "../../output/rtables/shanresults.csv")
+
+# Copy to html
+shanresults %>% 
+  tab_df(file="../../output/rtables/shanresults.html", title = "shandance contrasts (estimates)") #%>% 
+
+# Display inline
+shanresults
+
+```
+
+# Ratios
+```{r shan-emmeans-ratios}
+# Ratios with CI
+shanratios <- emmeans(pshan.glmmp, pairwise ~ Reeftype, type='response', combine=TRUE) %>%
+  confint() %>% 
+  as.data.frame()
+
+# p values
+shanratiopvals <- emmeans(pshan.glmmp,  ~ Reeftype, type='response', combine=TRUE) %>% 
+  pairs() %>% 
+  as.data.frame() 
+
+# Combine
+shanratios <- bind_cols(shanratios, shanratiopvals[6:7]) 
+
+# Write to csv
+write_csv(shanratios, file = "../../output/rtables/shanratios.csv")
+
+# Copy to html 
+shanratios %>% 
+  tab_df(file="../../output/rtables/shanratios.html", title = "shandance contrasts (ratios)")
+shanratios
+```
+
+
+# Shannon plot data
+```{r shan-plot-data}
+
+shanplotdata <- emmeans(pshan.glmmp, pairwise ~ Reeftype, transform='response') %>%
+  confint() %>% 
+  as_tibble() 
+
+
+save(shanplotdata, file='../../data/shanplotdata.RData')
+
+```
+
+
+
+
+# Community differences
+
+```{r -community-model}
+getwd()
+source("pred_mvabund.R", local = knitr::knit_global())
+```
+
+
+
+
+
+```{r}
+
+```
+
+
+

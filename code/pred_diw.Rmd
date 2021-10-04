@@ -1,0 +1,51 @@
+---
+title: "Predator diw and general"
+author: "Ben Cresswell"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+ html_document:
+    code_folding: show
+    collapse: no
+    df_print: paged
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 4
+    highlight: textmate
+    theme: spacelab
+    toc: yes
+    toc_float: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+# This Rmd serves as a supplement to the diw.R script - with notes on steps taken
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+getwd()
+```
+
+# Run the general predator import and wrangling script
+```{r diw-chunk, include=FALSE}
+source("pred_diw.R", local = knitr::knit_global())
+```
+
+# Notes on taxa selection
+
+- 9 families initially included in predator data subset (see below)
+- Further taxa added based on diet, max size and trophic position:
+                     Taxa      Trophic Group Trophic Level Max Length (cm)
+1     Epibulus insidiator          piscivore          4.01              54
+2      Myripristis botche          piscivore          4.00              30
+3   Oxycheilinus digramma          piscivore          3.70              40
+4            Platax teira          piscivore          3.95              70
+5      Priacanthus hamrur          piscivore          3.82              45
+6 Sargocentron spiniferum          piscivore          3.80              51
+7     Cheilinus undulatus invertivore-mobile          3.99             229
+
+## Families included in "predator" data set (9):
+Carangidae (trevallies 131), Carcharinidae (sharks 6), Cirrhitidae (hawkfishes 5), Haemulidae (sweetlips/grunts 2), Lethrinidae (emperors 18), Lutjanidae (snappers 296), Scombridae (mackerel/tuna 7), Serranidae (groupers 667 - Pseudanthias excluded), Sphyraenidae (barracudas 80)
+
+## Families excluded from the "predator" data set:
+Acanthuridae (surgeonfishes 1344), Apogonidae (cardinalfishes 2), Balistidae (triggerfishes 265), Blenniidae (blennies 6), Caesionidae (fusiliers 334), Chaetodontidae (butterfly fishes 369), Ephippidae (13), Haemulidae (2)    Holocentridae (soliderfish, 42 obs), Labridae (wrasses, 281), Monacanthidae (filefishes, 45), Mullidae (goatfishes 13), Nemipteridae (threadfin breams 5 (all Scolopsis)), Oneirodidae (anglerfish - incorrect entry only 1 observation), Pholidichthyidae (convict blenny 1 obs), Pomacanthidae (anglefishes 89), Pomacentridae (damselfishes 1912), Priacanthidae (bigeyes 1 obs), Pseudochromidae (dottybacks 11), Scaridae (parrotfishes 202), Siganidae (rabbitfishes 14), Tetraodontidae (pufferfishes 7), Zanclidae (Moorish idol 72)
+

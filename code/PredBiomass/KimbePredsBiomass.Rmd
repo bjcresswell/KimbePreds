@@ -1,0 +1,252 @@
+---
+title: "KimbePredsBiomass"
+author: "Ben Cresswell"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+ html_document:
+    code_folding: show
+    collapse: no
+    df_print: paged
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 4
+    highlight: textmate
+    theme: spacelab
+    toc: yes
+    toc_float: yes
+---
+
+# Rmd created: 2.7.2021 BJC
+# Last edit: 31.8.2021 BJC on Argo
+
+## Introduction
+This document analyses predator fish biomass from the Kimbe Bay video survey data set. 
+
+## Packages and housekeeping
+```{r biom-packages, include=FALSE, eval=TRUE}
+#rm(list=ls())
+#graphics.off()
+#getwd()
+library(gridExtra) #for plotting
+library(gt)
+library(lme4)      #basic model builder
+library(car)       #for regression diagnostics
+library(multcomp)  #for lm work
+library(broom)     #for tidy output
+library(ggfortify) #for model diagnostics
+library(DHARMa)    #for residual diagnostics
+library(performance)
+library(glmmTMB)   #for wider selection of error families
+library(sjPlot)    #for outputs
+library(effects)   #for partial effects plots
+library(ggeffects) #for partial effects plots
+library(emmeans)   #for estimating marginal means
+library(modelr)    #for auxillary modelling functions
+library(artyfarty) #for plotting
+library(MuMIn)     #for pseudo R2
+library(tidyverse) #for data wrangling
+```
+
+# Rmd setup, directory selection
+```{r biom-setup, include=TRUE, warnings=FALSE, message=FALSE}
+knitr::opts_chunk$set(root.dir = "code/PredBiomass", echo = TRUE)
+#getwd()
+```
+
+
+# Basic data wrangling: Loads fish DOV data from both survey periods (2018 and 2019) and extracts just predator observations:
+```{r diw-chunk, include=FALSE}
+#source("../pred_diw.R", local = knitr::knit_global())
+#Or can skip this as the next chunk includes importing main df
+```
+
+
+## Basic biomass calculations on the predator data frame
+```{r biom-diw-chunk, results='markdown', eval=FALSE, message=FALSE, warning=FALSE}
+source("pred_biom_diw.R", local = knitr::knit_global())
+```
+
+# Variables:
+Modeling predator biomass (response variable) against reef type (fixed effect predictor variable), with site as a random effect:
+
+1. Biomass (response variable - raw data in grams but diw converts to kg for rest of analysis)
+2. Reef type (predictor variable - fixed effect): Factor with 3 'levels'.
+3. Site (nested random effect): 4, nested within reef type, 12 total.
+4. Total biomass of fish (scaling variable): Need to scale the model to account for total fish biomass?? --> Check if this makes a difference
+
+
+# Basic data exploration
+merpredsum has the transect_biomass column in it.
+Can also run using: source("pred_biom_eda.R", local = knitr::knit_global())
+```{r biom-eda1}
+# Load data (if not running above chunks)
+load(file = "../../data/merpredsum.RData")
+
+# Glimpse
+glimpse(merpredsum)
+
+# Fig. 1: Histogram of all data 
+hist1 <- ggplot(merpredsum, aes(x=Transect_pred_biomass_kg)) + 
+  geom_histogram(color="black", fill="grey")
+
+# Fig. 2: Histogram of data on log scale 
+hist2 <- ggplot(merpredsum, aes(x=log(Transect_pred_biomass_kg))) + 
+  geom_histogram(color="black", fill="grey")
+
+# Table 1 and Fig. 3: Compare sites:
+(predreeftypestats <- merpredsum %>% 
+  group_by(Reeftype) %>% 
+  summarise_each(funs(mean,sd,se=sd(.)/sqrt(n())), Transect_pred_biomass_kg))
+
+# Fig 3
+rtbar <- ggplot(predreeftypestats, aes(x=Reeftype, y=mean))+
+  geom_bar(stat="identity", position="dodge", color="black")+
+  scale_y_continuous("Mean predator count (±SE)")+
+  scale_x_discrete("Reef type and survey period")+
+  labs(title="Predator biomass by reef type")+
+  scale_fill_viridis_d()+
+  theme_scientific()+
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.2, position=position_dodge(.9))+
+  theme(legend.key.size = unit(0.4, "cm"))+
+  theme(plot.title = element_text(size = 14, face = "bold"),
+        legend.title=element_text(size=9), 
+        legend.text=element_text(size=8),
+        axis.title.y = element_text(size=10, face="bold"),
+        axis.title.x = element_text(size=10, face="bold"),
+        axis.text = element_text(size=6))
+
+# And plot
+grid.arrange(hist1, hist2, rtbar, nrow=1)
+```
+- Lots of zeros so perhaps will need a ZI term in the model. 
+- Log hist looks normal so prob will need a distribution on the log scale
+- Not count data but expecting neg binom distributions to work best.
+- As per abundance, predator biomass highest on pinnacles 
+- Exaggerated by large schools of large pelagic/semi-pelagic fishes (in particular S. qenie)
+
+# Fit models
+Will start with basic GLMM with site as random factor. Definitely not going to be Gaussian, Gamma (zeros), Beta (not 0-1). Will start with Poisson, Neg Binom, ZI and Tweedie. Will introduce offset later on to account for total fish biomass
+```{r biom-model-fit, warning=FALSE}
+# Poisson
+biom.glmmp <- glmmTMB(Transect_pred_biomass_kg~Reeftype+(1|SiteCode), data=merpredsum, family=poisson())
+# Negbinom
+biom.glmmnb2 <- glmmTMB(Transect_pred_biomass_kg~Reeftype+(1|SiteCode), data=merpredsum, family=nbinom2(link = "log"))  
+# ZI on nb
+biom.glmmzi <- glmmTMB(Transect_pred_biomass_kg~Reeftype+(1|SiteCode), data=merpredsum, family=nbinom2(), ziformula=~1)
+# Tweedie
+biom.glmmt <- glmmTMB(Transect_pred_biomass_kg~Reeftype+(1|SiteCode), data=merpredsum, family=tweedie(link = "log"))  
+```
+
+
+# Model diagnostics
+```{r biom-model-diag}
+simulateResiduals(biom.glmmp, plot=T) # 
+simulateResiduals(biom.glmmnb2, plot=T) 
+simulateResiduals(biom.glmmzi, plot=T) 
+simulateResiduals(biom.glmmt, plot=T)
+```
+- Neg binom or Tweedie best residual fit
+
+# Check using binned residuals:
+```{r biom-binresid}
+binned_residuals(biom.glmmp) #100% within error bounds
+binned_residuals(biom.glmmnb2) #100% within error bounds
+binned_residuals(biom.glmmzi) #100% within error bounds
+binned_residuals(biom.glmmt) #100% within error bounds
+```
+
+
+# Validation with AIC
+```{r biom-aic1}
+AIC(biom.glmmp, biom.glmmnb2, biom.glmmzi, biom.glmmt)
+```
+
+NB best fit so will work with this 
+
+# Model tweaking
+Going to add the offset straight away
+```{r biom-nb-offset}
+biom.glmmnboff <- update(biom.glmmnb2, ~ . + offset(log(Transect_fish_biomass_kg)))
+```
+
+# Revalidation with AIC
+```{r biom-aic2}
+AIC(biom.glmmnboff, biom.glmmnb2)
+#binned_residuals(biom.glmmnboff)
+```
+
+- Offset model better fit
+
+# Check summary
+```{r}
+#summary(biom.glmmnboff)
+```
+
+
+# Results (emmeans and contrasts on response scale - predator biomass)
+```{r biom-emmeans-results}
+# emmeans and contrasts first
+biomcontrasts <- emmeans(biom.glmmnboff, pairwise ~ Reeftype, transform='response', combine=TRUE) %>%
+  confint() %>% 
+  as.data.frame() 
+
+# pvalues
+biompvals <- emmeans(biom.glmmnboff,  ~ Reeftype, transform='response', combine=TRUE) %>% 
+  pairs() %>% 
+  as.data.frame() 
+  
+# Combine for full results table
+biomresults <- bind_cols(biomcontrasts, biompvals[5:6]) 
+
+# Write to csv
+write_csv(biomresults, file = "../../output/rtables/biomresults.csv")
+
+# Copy out to html
+biomresults %>% 
+  tab_df(file="../../output/rtables/biomresults.html", title = "Biomass (kg) contrasts (estimates)") #%>% 
+
+# Display inline
+biomresults
+```
+So non-significant difference between pinnacles and offshore reefs but other contrasts are significant
+
+# Ratios (using type="response"):
+```{r biom-emmeans-ratios}
+# Ratios with CI
+biomratios <- emmeans(biom.glmmnboff, pairwise ~ Reeftype, type='response', combine=TRUE) %>%
+  confint() %>% 
+  as.data.frame()
+
+# p values
+biomratiopvals <- emmeans(biom.glmmnboff,  ~ Reeftype, type='response', combine=TRUE) %>% 
+  pairs() %>% 
+  as.data.frame() 
+
+# Combine
+biomratios <- bind_cols(biomratios, biomratiopvals[6:7]) 
+
+# Write to csv
+write_csv(biomratios, file = "../../output/rtables/biomratios.csv")
+
+# Copy to html
+biomratios %>% 
+  tab_df(file="../../output/rtables/biomratios.html", title = "Biomass (kg) contrasts (ratios)")
+
+# Display inline
+biomratios
+```
+Slightly different story with the ratios - don't know why!!  The story is pretty much the same however.
+
+# Create plot data
+Final step is to create the df to be used for plot making 
+```{r biom-plot-data}
+biomplotdata <- emmeans(biom.glmmnboff, pairwise ~ Reeftype, transform='response') %>%
+  confint() %>% 
+  as_tibble() 
+
+save(biomplotdata, file='../../data/biomplotdata.RData')
+```
+
+
+
+
