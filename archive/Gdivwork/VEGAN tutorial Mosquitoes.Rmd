@@ -1,0 +1,84 @@
+---
+title: "VEGAN tutorial"
+author: "Gemma Cresswell"
+date: "02/01/2019"
+output: html_document
+---
+ install package
+install.packages("vegan") 
+
+# load package
+library("vegan")
+Import the data from GitHub and specify that Habitat is an ordered factor (this will be important for boxplots and linear models).
+
+# read data from GitHub
+data <- read.csv("https://raw.githubusercontent.com/rgriff23/Mosquito_ecology/master/Analysis/data.csv", row.names=1)
+
+# make Habitat an ordered variable
+data$Habitat <- ordered(data$Habitat, c("Field", "NearField", "Edge", "NearForest", "Forest"))
+Take a few minutes to familiarize yourself with the data. There are 45 rows corresponding to 45 traps, and 36 columns which can be broken down as follows:
+
+columns 1-3: trap characteristics (region, transect, habitat)
+columns 4-8: landscape variables related to vegetation cover
+columns 9-12: landscape variables related to man-made structures
+column 13: number of trap-nights
+columns 14-36: abundance of mosquito species
+I refer to these column numbers when subsetting the data below.
+
+
+Does species diversity vary across habitats?
+This first question requires us to compute mosquito species diversity indices for each trap location. We will compute three measures of species diversity:
+
+Richness, the total number of unique species found at a site
+Shannon-Weiner diversity, a common diversity index where species are weighted by abundance
+Rarefied richness, or species richness estimated with a resampling procedure to control for variation in sample size
+
+Here is code to compute these metrics for each trap site:
+
+# mosquito abundance matrix
+
+```{r}
+abundance.matrix <- data[,14:36]
+```
+
+# store computed indices in a new data frame called 'indices'
+
+```{r}
+indices <- data[,c("Region","Transect","Habitat")]
+indices$Richness <- rowSums(abundance.matrix>0)
+indices$Shannon <- diversity(abundance.matrix) # shannon is default
+indices$Rarefied <- c(rarefy(abundance.matrix[1:45,], sample=15))
+```
+
+library(vegan)
+
+Use boxplots to visualize differences in species diversity along our field-forest habitat gradient:
+```{r}
+par(mar=c(3,4,3,2), mfrow=c(2,2))
+colors = terrain.colors(6)[5:1]
+boxplot(Richness~Habitat, data=indices, boxwex=0.5, col=colors, 
+        cex.axis=0.5, ylab="Richness")
+boxplot(Shannon~Habitat, data=indices, boxwex=0.5, col=colors, 
+        cex.axis=0.5, ylab="Shannon diversity")
+boxplot(Rarefied~Habitat, data=indices, boxwex=0.5, col=colors, 
+        cex.axis=0.5, ylab="Rarefied richness")
+```
+
+
+
+```{r}
+We can test for differences among habitats statistically using a linear model, with Habitat as a predictor of species diversity:
+
+# fit linear models
+mod.richness <- lm(Richness~Habitat, data=indices)
+mod.shannon <- lm(Shannon~Habitat, data=indices)
+mod.rarefied <- lm(Rarefied~Habitat, data=indices)
+
+# ANOVA 
+anova(mod.richness)
+
+anova(mod.shannon)
+
+anova(mod.rarefied)
+```
+
