@@ -48,6 +48,7 @@ fish <- fish %>%
   mutate(SiteCode = factor(SiteCode, levels= c("BRAD", "JOEL", "INGL", "KBOM",   # Pinnacles first
                                                "EMA",  "HOG", "KIS", "OTT",      # then offshore
                                                "DON", "LADI", "MADA", "SUSA"))) %>%   # then nearshore
+  #mutate(TID2 = paste(Site, Transect)) %>% 
   mutate(Length = Length/10)
 
 #save(fish, file='data/fish.RData') # Save as RData file
@@ -262,7 +263,7 @@ preds %>%
 #if (!dir.exists('data')) dir.create('data') # Create folder for data if one not present
 save(preds, file='data/preds.RData') # Save as RData file
 rm(list=ls())
-load(file='data/preds.RData') # Save as RData file
+#load(file='data/preds.RData') # Save as RData file
 
 
 

@@ -8,7 +8,8 @@
 # 2. Diversity metrics dataframe (with Spp richness and Shannon-Weiner H scores)
 
 # Housekeeping
-setwd("/Users/bjcresswell/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/code/PredDiversity")
+getwd()
+setwd("~/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/code/PredDiversity") # Have to specify this so that the script works embedded within the Rmd
 rm(list=ls())
 
 
@@ -22,14 +23,19 @@ library(tidyverse)
 load('../../data/preds.RData')
 load('../../data/fish.RData')
 
+# Examine
+head(preds)
+glimpse(preds)
+str(preds)
+summary(preds)
 
-# Generate spp counts for both preds...
+# Summarise spp counts by transect for both preds...
 pred.count <- preds %>% 
   group_by(Family, TID, Taxa) %>% # Group including family for use in taxa_nos analysis later
   dplyr::summarise(Count=sum(Number))
 head(pred.count) 
 
-#save(pred.count, file='../../data/pred.count.RData')
+#save(pred.count, file='data/pred.count.RData')
 
 #.. and fish
 fish.count <- fish %>% 
@@ -60,7 +66,7 @@ preddiv <- preddiv %>%
   mutate(SpecNo = specnumber(preddiv)) %>% 
   mutate(Shannon = diversity(preddiv)) %>% 
   mutate(Simpson = diversity(preddiv, index = "simpson")) %>% # Just generating Simpson out of interest - someone bound to ask about it
-  rownames_to_column("TID") %>% # Get rid of TID column so the next 3 lines will run
+  rownames_to_column("TID") %>% # Put back TID column
   mutate(Reeftype = factor(case_when(grepl("BRAD", `TID`) ~ "Pinnacle",      # Assign reef type status
                                      grepl("JOEL", `TID`) ~ "Pinnacle",
                                      grepl("KBOM", `TID`) ~ "Pinnacle",
@@ -102,37 +108,49 @@ preddiv <- preddiv %>%
                                  grepl("OTT", `TID`) ~ "Otto",
                                  grepl("KIS", `TID`) ~ "Kimbe Island"))) %>% 
   mutate(SurvCode = factor(case_when(grepl("1018", `TID`) ~ "2018",      # Assign surv code
-                                     grepl("0319", `TID`) ~ "2019")))
+                                     grepl("0319", `TID`) ~ "2019"))) %>% 
+  mutate(Transect = factor(case_when(grepl("T1", `TID`) ~ "T1",      # Assign site name
+                                     grepl("T2", `TID`) ~ "T2",
+                                     grepl("T3", `TID`) ~ "T3",
+                                     grepl("T4", `TID`) ~ "T4",
+                                     grepl("T5", `TID`) ~ "T5"))) %>% 
+  mutate(Site_Tran = factor(paste(SiteCode, Transect)))
+  
 
+head(preddiv)
 # Columns 2-64 are the taxa
 # Columns 65-67 are the metrics (richness, Shannon, Simpson)
-# Columns 68-71 are the survey parameters
+# Columns 68-73 are the survey parameters
 # Reorder for sensibility
-preddiv <- preddiv[c(1,68:71,65:67,2:64)]  
+preddiv <- preddiv[c(1,68:73,65:67,2:64)]  
 
-# Note: Simpson index will be excluded for further analysis
-# All the 0 score transects by default get a Simpson score of 1 - so when analysed in a model it will skew the results (unless you manually remove - don't see the point)
-# Also Shannon "rewards for rarity" which I want
+## Notes on indices selection: 
+# Simpson index will be excluded for further analysis here because:
+# All the 0 score transects by default get a Simpson score of 1
+# So when analysed in a model it will skew the results (unless you manually remove - don't see the point)
+# Also Shannon "rewards for rarity" which is what I actually want to delve into
+
 # If you want to see why Simpson not good in this instance can run this plot:
 ggplot(preddiv, aes(y=Simpson,  x=Shannon))+
   geom_point()
 ggplot(preddiv, aes(x=Reeftype, y=Simpson))+
   geom_boxplot()
+
+# Histograms
+# Simpson across whole data set
 ggplot(preddiv, aes(x=Simpson)) + 
   geom_histogram(binwidth=0.1, color="black", fill="grey")
+# Simpson just for nearshore sites
 ggplot(data=subset(preddiv, Reeftype=='Nearshore'), aes(x=Simpson)) + 
+  geom_histogram(binwidth=0.1, color="black", fill="grey")
+
+# Compare to Shannon...
+ggplot(preddiv, aes(x=Shannon)) + 
+  geom_histogram(binwidth=0.1, color="black", fill="grey")
+ggplot(data=subset(preddiv, Reeftype=='Nearshore'), aes(x=Shannon)) + 
   geom_histogram(binwidth=0.1, color="black", fill="grey")
 
 
 # Save for use in eda and modeling
 save(preddiv, file='../../data/preddiv.RData')
 load(file='../../data/preddiv.RData')
-
-
-
-
-
-
-
-
-

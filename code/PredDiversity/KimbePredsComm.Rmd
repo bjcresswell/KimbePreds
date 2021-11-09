@@ -20,7 +20,7 @@ editor_options:
 Rmd created: 17.9.2021
 Last edit: 17.9.2021 BJC
 
-
+Note to self - ensure that you a
 # Introduction
 This Rmd brings together the analyses of predator fish community composition from the Kimbe Bay video survey data set.
 Analyses are broken down into steps:
@@ -41,7 +41,7 @@ graphics.off()
 
 
 # 1. Multivariate GLM and ANOVA
-```{r pred-comm-manyglm, include=TRUE, warnings=FALSE, message=FALSE}
+```{r pred-comm-manyglm, include=TRUE, warnings=FALSE, message=FALSE, fig.height=6, fig.width=12}
 # Model takes a long time to run so have saved.  To run entire manyglm script and re-run model:
 source("pred_mvabund.R", local = knitr::knit_global())
 
@@ -124,10 +124,6 @@ rtsigbar
 ```{r pred-comm-PCA, include=TRUE, warnings=FALSE, message=FALSE}
 # Source from script
 source("pred_ordiplot_gg.R", local = knitr::knit_global())
-
-
-
-
 
 ```
 

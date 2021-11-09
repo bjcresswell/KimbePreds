@@ -6,7 +6,7 @@
 
 
 # Housekeeping
-#rm(list=ls())
+rm(list=ls())
 #graphics.off()
 
 
@@ -28,12 +28,15 @@ load(file='../../data/preddiv.RData')
 # Species counts as columns (63 separate taxa in this dataset)
 # Plus a bunch of columns with other information (most importantly - reef type)
 
+head(preddiv)
+
 
 # 1. Data wrangling
 
 # First need to turn our df into an mvabund object:
-predabund <- mvabund(preddiv[9:71]) # Drops row names and all other explanatory variables
+predabund <- mvabund(preddiv[11:73]) # Drops row names and all other explanatory variables
 
+# Creating mvabund object puts . in all spaces so need to get them back (for later on)
 colnames(predabund) <- colnames(predabund) %>% 
   str_replace_all(c("\\." = " "))
 
@@ -45,14 +48,14 @@ predenv <- preddiv[1:7]
 
 # 2. EDA
 
-# Can interrogate the mean-variance relationship
-par(predabund) # Sets up viewing pane - might not need in Rmd
+# Can interrogate the mean-variance relationship - expected to correlate in abundance data (think Poisson, nb)
+par(predabund) # Have to set up viewing pane for some reason.. (also necessary for Rmd output)
 meanvar <- meanvar.plot(predabund) 
-# Strong MV relationship - expected from this type of count data and would point to Poisson or neg binom distribution
+# Strong MV relationship - expected from this type of count data and would point to Poisson or neg binom distribution as you'd expect
 
 # Basic overview of main species abundance differences across reef type
 #specabun <- plot(predabund~preddiv$Reeftype, transformation="no")
-specabuntran <- plot(predabund~predenv$Reeftype) # By default applies log transformation
+specabuntran <- plot(predabund~predenv$Reeftype) # By default applies log transformation, gives you top 10-12
 
 
 # 3. Model fitting
@@ -83,24 +86,28 @@ control <- how(within = Within(type = 'none'),
                nperm = 999)
 permutations <- shuffleSet(nrow(predenv), control = control)
 
-R.version.string
 
 # Pairwise comparisons (uni and multivariate) extracted using anova.manyglm function:
-# modelaovpairwise <- anova.manyglm(mvmodnb, bootID = permutations, pairwise.comp = predenv$Reeftype, p.uni="adjusted")
+#modelaovpairwise <- anova.manyglm(mvmodnb, bootID = permutations, pairwise.comp = predenv$Reeftype, p.uni="adjusted")
 # Very slow to run -save results for use later
 
 
-#save(modelaovpairwise, file = "../../data/mvabundaov.rda") # Last save 17/9/21
+#save(modelaovpairwise, file = "../../data/mvabundaov.rda") # Last run and save 31/10/21
 load(file = "../../data/mvabundaov.rda")
 
 # Results overview
 modelaovpairwise
 
 # 1. Details - multivariate
+
+#Summary
 modsum <- modelaovpairwise$table 
 modsum # Can report as: "Significant effect of reef type on predator fish communities (LRT=507, P=0.02)
-modpairs <- modelaovpairwise$pairwise.comp.table 
-modpairs # LRT pairwise comparisons - report results in table
+
+# Pairwise 
+modpairs <- modelaovpairwise$pairwise.comp.table %>% 
+  as.data.frame()
+# LRT pairwise comparisons - report results in table
 
 # 2. Details - univariate
 uniLRTs <- as.data.frame(t(modelaovpairwise$uni.test)) %>% 
@@ -128,7 +135,6 @@ unitests
 # Save output
 write_xlsx(unitests, "../../output/rtables/taxa_LRT_mvabund.xlsx")
 save(unitests, file = "../../data/mvabund_unitests.RData")
-
 
 
 

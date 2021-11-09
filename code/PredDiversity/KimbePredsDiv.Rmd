@@ -1,5 +1,5 @@
 ---
-title: "Kimbe Bay Coral Reef Predator Fish Diversity"
+title: "Kimbe Bay Coral Reef Predator \n Fish Diversity Anslysis"
 author: "Ben Cresswell"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
@@ -8,8 +8,8 @@ output:
     collapse: no
     df_print: paged
     fig_caption: yes
-    fig_height: 4
-    fig_width: 4
+    fig_height: 6
+    fig_width: 10
     highlight: textmate
     theme: spacelab
     toc: yes
@@ -17,31 +17,33 @@ output:
 editor_options: 
   chunk_output_type: inline
 ---
+
 Rmd created: 2.7.2021
 Last edit: 31 Aug 2021 BJC
+Last edit: 26 Oct 2021 BJC
 
 
 # Introduction
 This document analyses predator fish community diversity from the Kimbe Bay video survey data set.
 Analyses are broken down into 2 broad components:
 
-1. Diversity metrics
+1. Diversity metrics (dealt with in the first part of this Rmd)
 - This part models the effect of the predictor variable (reeftype) against 2 diversity metrics: Species richness and Shannon Weiner H (Simpsons excluded for reasons outline in div-diw script)
 
-2. Community analysis
-- This component runs a PCoA on the communities to assess multivariate differences between the 3 reeftypes. This is complemented with a vector analysis to see which taxa are most driving differences in community structure and also followed up with a SIMPER/PERMANOVA test (TBC). Community composition is simplified using a basic venn diagram to show overlapping/non-overlapping taxa.
+2. Community analysis (second part of this Rmd but also see venndiag, taxa_nos, ordiplot and mvabund scripts)
+- This component investigates differences in community structure between the 3 reef types using a multivariate GLM, with PIT resampling to account for variance from random effect of site. Differences are visualised in a PCA and venn diagram.
 
 
-Rmd setup, directory selection
 ```{r setup, include=FALSE, warnings=FALSE, message=FALSE}
+# Rmd setup, directory selection
 knitr::opts_chunk$set(root.dir = "~/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/code/PredDiversity", echo = TRUE)
 getwd()
 ```
 
 
 # Packages and housekeeping
-```{r div-packages, include=FALSE, eval=TRUE}
-getwd()
+```{r div-packages,echo=TRUE, include=FALSE, eval=TRUE}
+rm(list=ls())
 library(gridExtra) #for plotting
 library(gt)
 library(lme4)      #basic model builder
@@ -64,102 +66,152 @@ library(tidyverse) #for data wrangling
 ```
 
 
-# Data import and wrangling
+# Data import and wrangling {.tabset .tabset-faded}
 
 ## Diversity data wrangling script
 Generates a master-diversity data frame which includes diversity metrics and a species matrix
-```{r pred-div-diw}
+```{r pred-div-diw, warning=FALSE, include=FALSE, echo=TRUE}
 source("pred_div_diw.R", local = knitr::knit_global())
 ```
 
 
-# Basic data exploration
-Check how the data are distributed across the different reefs and reef types
-```{r div-eda}
-# Histograms
-# Species richness
-srhist <- ggplot(preddiv, aes(x=SpecNo)) + 
-  geom_histogram(binwidth=1, color="black", fill="grey") # Count data and looks poisson distributed
-# Shannon
-shhist <- ggplot(preddiv, aes(x=Shannon)) + 
-  geom_histogram(binwidth=0.1, color="black", fill="grey") # Possibly bimodal??
-# Simpson - not used, see below
-#sihist <- ggplot(data=subset(preddiv, Reeftype=='Nearshore'), aes(x=Simpson)) + 
-#  geom_histogram(binwidth=0.1, color="black", fill="grey") # No idea...
-
-# Boxplots - by reeftype
-# Richness
-srbox <- ggplot(preddiv, aes(x=Reeftype, y=SpecNo))+
-  geom_boxplot()
-# Shannon
-shbox <- ggplot(preddiv, aes(x=Reeftype, y=Shannon))+
-  geom_boxplot()
-# Simpson - not using as penalises highly abundant communities. See Ch 23 in Krebs
-
-grid.arrange(srhist, shhist, srbox, shbox, ncol=4)
-
-```
-- Species richness: Will start with Poisson and move to neg binom if doesn't work
-- Shannon: Will start with Gaussian, move to binom possibly. Looks like ZI?
-- Simpson: Not using.
-
-
-#  Models
-
 # 1. Species Richness
 
-Start with Poisson and Neg binom (Notes: REML=F returned better AIC. ZI test good on both so no ZI term in formulae)
-```{r rich-model-fit}
-# Poisson
-prglmmp <- glmmTMB(SpecNo ~ Reeftype+(1|Site), data = preddiv, family='poisson')
-# Neg binom
-prglmmnb <- glmmTMB(SpecNo ~ Reeftype+(1|Site), data = preddiv, family='nbinom2')
+# Basic data exploration {.tabset .tabset-faded}
+
+## Data overview
+
+Check how the data are distributed across the different reefs and reef types
+```{r div-eda}
+# Histogram
+srhist <- ggplot(preddiv, aes(x=SpecNo)) + 
+  geom_histogram(binwidth=1, color="black", fill="grey") # Count data and looks poisson distributed
+
+# Boxplot - by reeftype
+srbox <- ggplot(preddiv, aes(x=Reeftype, y=SpecNo))+
+  geom_boxplot()
+
+grid.arrange(srhist, srbox, ncol=2)
+```
+- Count data: will start with Poisson and move to neg binom if doesn't work
+
+## Random effects
+- Investigate random effects (added post ML course Oct 2021) (Note: AIC comparison with fixed effect models included below)
+```{r rich-RE-plot}
+# Check if random intercept/slope necessary for model
+ggplot(preddiv, aes(y=SpecNo, x=SurvCode, group=Site_Tran)) +
+    geom_point() +
+    geom_line() +
+    facet_grid(~Reeftype) # facet_wrap tried to make a square
+
 ```
 
-# Model diagnostics
+
+#  Fit model {.tabset .tabset-faded}
+
+## Poisson and Neg binom
+Start with Poisson and Neg binom (Notes: REML=F returned better AIC by 5 points. ZI test good on both so no ZI term in formulae)
+```{r rich-model-fit}
+# Poisson
+prglmmp <- glmmTMB(SpecNo ~ Reeftype+(1|Site), data = preddiv, family='poisson', REML = FALSE)
+# Neg binom
+prglmmnb <- glmmTMB(SpecNo ~ Reeftype+(1|Site), data = preddiv, family='nbinom2', REML = FALSE)
+
+```
+
+## DHARMa residuals
 ```{r rich-model-diag}
 # Poisson
 simulateResiduals(prglmmp, plot=T) # Looks good
 testZeroInflation(prglmmp) # No ZI
-binned_residuals(prglmmp) # 100% inside error bounds
 
 # Neg binom
 simulateResiduals(prglmmnb, plot=T) # Looks good
 testZeroInflation(prglmmnb) # No ZI
-binned_residuals(prglmmnb) # 100% inside error bounds
 ```
 - Residuals for both models look ok.
 
-# Validation with AIC
+## AIC
 ```{r rich-model-aic}
 AIC(prglmmp, prglmmnb)
 ```
-- Poisson best fit
+- Poisson best fit - now compare to random effects only
 
-# Summary (Poisson model)
+## Random effects only
+```{r raneffect-only}
+# RE only
+prglmmREn = glmmTMB(SpecNo ~ 1 + (1|Site), data = preddiv, family='gaussian', REML = FALSE)
+prglmmREp = glmmTMB(SpecNo ~ 1 + (1|Site), data = preddiv, family='poisson', REML = FALSE)
+```
+## AIC2
+```{r rich-model-aic2}
+AIC(prglmmp, prglmmnb, prglmmREn, prglmmREp)
+```
+Fixed effects a better fit than R.E. only and poisson best fit overall
+
+# Model investigation {.tabset .tabset-faded}
+
+## Partial plot
+```{r rich-partial-plot}
+prglmmp %>% plot_model(type='eff', show.data=TRUE)
+```
+
+## Summary table
 ```{r rich-model-summary}
 summary(prglmmp)
 ```
+$ Summary Interpretation $
 
+$ Pinnacles (Intercept) $
+exp(1.7940)
+->  mean of 6.01 spp per transect for pinnacle reefs
 
+$ Offshore $
+exp(-1.1626) = 0.3126722
+0.313*6.01
+-> mean of 1.88 spp per transect for offshore reefs
+
+$ Nearshore $
+exp(-1.7514) = 0.1735308
+0.174*6.01
+-> mean of 1.05 spp per transect for nearshore reefs
+
+Variance in conditional model looks low but cbeck R2:
+
+## R squared
 ```{r rich-model-R2}
-#r.squaredGLMM(prglmmp) # See ML section on this glmm_example1.Rmd - hard to interpret variance of random factors in GLMM
+r.squaredGLMM(prglmmp) # See ML section on this glmm_example1.Rmd - hard to interpret variance of random factors in GLMM
+prglmmp %>% performance::r2_nakagawa()
+```
+-> Can also check random effects individually:
+
+## Raneffects
+```{r rich-model-raneffects}
+prglmmp %>% ranef()
 ```
 
+# Results {.tabset .tabset-faded}
 
-# Results: emmeans
+## emmeans
 ```{r rich-emmeans-trans}
 emmeans(prglmmp, pairwise~Reeftype, transform="response") %>% 
-  confint() #%>% 
+  confint() %>% 
   as.data.frame() %>% 
-  tab_df()
+  tab_df() #tab_df for export
+  
+# OR from ML2021:
+prglmmnb %>% 
+  emmeans(~Reeftype) %>% 
+  regrid %>% 
+  pairs() %>% 
+  summary(infer=TRUE)
 ```
-# emmeans notes:
+$ emmeans notes $
 - "Rate" is the reported term for a Poisson model (it's "response" for nb)
 - Results from neg binom very similar
 
 
-# Save emmeans and calculate ratios
+## Contrasts
 ```{r rich-emmeans-results}
 # Need to convert to a tibble in the process to change the names of the contrasts (for plotting later):
 richcontrasts <- emmeans(prglmmp, pairwise ~ Reeftype, transform='response') %>%
@@ -185,7 +237,7 @@ richresults %>%
 richresults
 ```
 
-
+## Ratios
 ```{r rich-emmeans-ratios}
 richratios <- emmeans(prglmmp, pairwise ~ Reeftype, type='response') %>%
   confint() %>% 
@@ -209,23 +261,58 @@ richratios
 ```
 
 
-# Spp richness plot data
+## Data for plotting
 ```{r rich-plots}
 richplotdata <- emmeans(prglmmp, pairwise ~ Reeftype, transform='response') %>%
   confint() %>% 
   as_tibble() 
 
-save(richplotdata, file='../../data/richplotdata.RData')
+#save(richplotdata, file='../../data/richplotdata.RData')
 
 ```
+
+
+
 
 #############################
 
 
 # 2. Shannon H' Diversity
 
-## Looks like it might be very zero-inflated so will probably need a Poisson or NegBinom family with ZI term
-In addition most error distributions won't work with these data including:
+# Basic data exploration {.tabset .tabset-faded}
+
+## Data overview
+```{r shannon-eda}
+# Shannon
+shhist <- ggplot(preddiv, aes(x=Shannon)) + 
+  geom_histogram(binwidth=0.1, color="black", fill="grey") # Possibly bimodal??
+# Simpson - not used, see notes elsewhere
+#sihist <- ggplot(data=subset(preddiv, Reeftype=='Nearshore'), aes(x=Simpson)) + 
+#  geom_histogram(binwidth=0.1, color="black", fill="grey") # No idea...
+
+shbox <- ggplot(preddiv, aes(x=Reeftype, y=Shannon))+
+  geom_boxplot()
+
+# Plot together
+grid.arrange(shhist, shbox, ncol=2)
+```
+
+## Random effects
+
+- Investigate random effects (added post ML course Oct 2021) (Note: AIC comparison with fixed effect models included below)
+```{r shan-RE-plot}
+# Check if random intercept/slope necessary for model
+ggplot(preddiv, aes(y=Shannon, x=SurvCode, group=Site_Tran)) +
+    geom_point() +
+    geom_line() +
+    facet_grid(~Reeftype) # facet_wrap tried to make a square
+
+```
+
+-> A note on error distributions
+- Looks like it might be very zero-inflated so likely will need a ZI term to handle
+- Can't use Poisson or Neg Binom as these are not count data
+- In addition most error distributions won't work with these data including:
 - Gamma - has to be positive values (and very bad residuals when using on raw data + 0.0000001)
 - ziGamma - same
 - Beta - has to be  0 < y < 1
@@ -233,148 +320,185 @@ In addition most error distributions won't work with these data including:
 - Inverse gaussian - positive values only and wouldn't work on ShannonAdj
 - All quasi families
 - All truncated families
+So.. two remaining candidates are gaussian and tweedie
 
-## So am just fitting Poisson and NegBinom with and without ZI terms:
-```{r shan-model-fit}
-# Poisson
-pshan.glmmp <- glmmTMB(Shannon ~ Reeftype+(1|Site), data = preddiv, family=poisson)
 
-# ZIP
-pshan.glmmzip <- glmmTMB(Shannon ~ Reeftype+(1|Site), data = preddiv, family=poisson, ziformula = ~1)
+# Fit model {.tabset .tabset-faded}
 
-# Neg binom 2
-pshan.glmmnb2 <- glmmTMB(Shannon ~ Reeftype+(1|Site), data = preddiv, family='nbinom2')
+Will use gaussian and tweedie distributions and check.
 
-# ZINB
-pshan.glmmzinb <- glmmTMB(Shannon ~ Reeftype+(1|Site), data = preddiv, family="nbinom2", ziformula = ~1)
 
+## Gaussian and Tweedie 
+```{r shan-fitmodel}
+# Gaussian (trying post ML2021)
+pshan.glmm <- glmmTMB(Shannon ~ Reeftype+(1|Site), data = preddiv, family=gaussian(link = 'identity'), ziformula = ~0,  REML = TRUE)
+pshan.glmmT <- glmmTMB(Shannon ~ Reeftype+(1|Site), data = preddiv, family=tweedie(link = 'log'), ziformula = ~0, REML = FALSE)
 ```
 
-# Model diagnostics
 
-## Start with ZI test
+## DHARMa residuals
+```{r checkdharma}
+simulateResiduals(pshan.glmm, plot=TRUE) # Fails deviation and hv and QQ plot looks bad.
+simulateResiduals(pshan.glmmT, plot=TRUE) # Fails dispersion and hv but QQ plot looks good. Check ZI...
+```
+
+## ZI test
+-> Discarded the gaussian model so just for tweedie
 ```{r shan-zit}
-# Poisson
-testZeroInflation(pshan.glmmp) # zero inflated
-
-# ZIP
-testZeroInflation(pshan.glmmzip) # zero inflated
-
-# Neg binom
-testZeroInflation(pshan.glmmnb2) # zero inflated
-
-# ZINB
-testZeroInflation(pshan.glmmzinb)
+testZeroInflation(pshan.glmmT)
 ```
--> All have expected number of zeros or less
+-> Slightly under-dispersed
 
 
-```{r}
-simulateResiduals(pshan.glmmp, plot=T) 
-binned_residuals(pshan.glmmp) # 82% inside error bounds
-performance::check_model(pshan.glmmp) # OK
 
-simulateResiduals(pshan.glmmzip, plot=T) 
-binned_residuals(pshan.glmmzip) # 82% inside error bounds
-plot_grid(plot_model(pshan.glmmzip,  type='diag')[-2]) # Doesn't work 
-performance::check_model(pshan.glmmzip) # Not great
-
-simulateResiduals(pshan.glmmnb2, plot=T) # Similar to Poisson
-binned_residuals(pshan.glmmnb2) # 82% inside error bounds
-plot_grid(plot_model(pshan.glmmnb2,  type='diag')[-2]) # Doesn't work 
-performance::check_model(pshan.glmmnb2) # Not great
-
-simulateResiduals(pshan.glmmzinb, plot=T) # Similar to Poisson
-binned_residuals(pshan.glmmzinb) # 82% inside error bounds
-plot_grid(plot_model(pshan.glmmzinb,  type='diag')[-2]) # Doesn't work 
-performance::check_model(pshan.glmmzinb) # Not great
-
+## Random effects only
+```{r shan-re-check}
+pshan.glmmRE = glmmTMB(Shannon ~ 1 + (1|Site), data = preddiv, family='tweedie', REML = FALSE)
 ```
 
--> Some overdispersion in all fits but nothing too bad
 
-
-# Validation with AIC
+##  AIC
 ```{r shan-model-aic}
-AIC(pshan.glmmp, pshan.glmmzip, pshan.glmmnb2, pshan.glmmzinb)
+AIC(pshan.glmmT, pshan.glmmRE)
 ```
--> Poisson best/most parsimonious fit
+-> Full model outperforms RE-only model
 
- 
-# Summary (Poisson model)
+
+
+
+# Model investigation {.tabset .tabset-faded}
+
+
+## Partial plot
+```{r shan-partial-plot}
+pshan.glmmT %>% plot_model(type='eff', show.data=TRUE)
+```
+
+
+
+
+## Summary table
 ```{r shan-model-summary}
-summary(pshan.glmmp) # Variance from "site" very low
+summary(pshan.glmmT)
+```
+
+$ Summary Interpretation $
+
+$ Pinnacles (Intercept) $
+exp(0.2143) = 1.238994
+->  mean of 1.24 spp per transect for pinnacle reefs
+
+$ Offshore $
+exp(-0.9082) = 0.4032494
+0.4*1.24 = 0.496
+-> mean of 0.5 spp per transect for offshore reefs
+
+$ Nearshore $
+exp(-1.5133) = 0.2201822
+0.22*1.24 = 0.2728
+-> mean of 0.23 spp per transect for nearshore reefs
+
+Variance in conditional model very low
+
+
+## Raneffects
+```{r shan-model-raneffects}
+pshan.glmmT %>% ranef()
 ```
 
 
 
-```{r shan-model-R2}
-#r.squaredGLMM(pshan.glmmp) # See ML section on this glmm_example1.Rmd - hard to interpret variance of random factors in GLMM
-#performance::r2(pshan.glmmp)
+# Results {.tabset}
+
+## emmeans
+Calculate estimated marginal means of Shannon diversity index per reef type:
+```{r shan-emmeans}
+emmeans(pshan.glmmT, ~Reeftype, transform="response") %>% 
+  #confint() #%>% 
+  as.tibble() #%>% 
+  #tab_df() #tab_df for HTML export
 ```
 
 
-# Results (emmeans and contrasts on response scale - Shannon H)
-```{r shan-emmeans-results}
+## Contrasts
+Calculate pairwise contrasts between reef types (including 95% CI and Pvals)
+```{r shan-contrasts}
+pshan.glmmT %>% 
+  emmeans(~Reeftype) %>% 
+  regrid %>% 
+  pairs() %>% 
+  summary(infer=TRUE)
+```
+
+```{r shan-emmeans-otherways, eval=FALSE, include=FALSE, echo=FALSE, warning=FALSE, cache=FALSE, message=FALSE}
 # emmeans and contrasts first
-shancontrasts <- emmeans(pshan.glmmp, pairwise ~ Reeftype, transform='response', combine=TRUE) %>%
+pshan.glmmT %>% 
+  emmeans(pairwise ~ Reeftype, transform='response') %>%
   confint() %>% 
   as.data.frame() 
 
 # pvalues
-shanpvals <- emmeans(pshan.glmmp,  ~ Reeftype, transform='response', combine=TRUE) %>% 
-  pairs() %>% 
-  as.data.frame() 
+#emmeans(pshan.glmmT,  ~ Reeftype, transform='response', combine=TRUE) %>% 
+#  pairs() %>% 
+#  confint() %>% 
+#  as.data.frame() 
 
 # Combine for full results table
 shanresults <- bind_cols(shancontrasts, shanpvals[5:6]) 
 
 # Write to csv
-write_csv(shanresults, file = "../../output/rtables/shanresults.csv")
+#write_csv(shanresults, file = "../../output/rtables/shanresults.csv")
 
 # Copy to html
-shanresults %>% 
-  tab_df(file="../../output/rtables/shanresults.html", title = "shandance contrasts (estimates)") #%>% 
+#shanresults %>% 
+#  tab_df(file="../../output/rtables/shanresultsTweedieREMLFALSE.html", title = "shandance contrasts (estimates)") #%>% 
 
 # Display inline
-shanresults
+#shanresults
 
 ```
 
-# Ratios
+## Ratios
+Calculate pairwise contrasts on ratio scale (inc 95% CI and Pvals)
 ```{r shan-emmeans-ratios}
+
+pshan.glmmT %>% 
+  emmeans(~Reeftype, type='response') %>% 
+  pairs() %>% 
+  summary(infer=TRUE) 
+
 # Ratios with CI
-shanratios <- emmeans(pshan.glmmp, pairwise ~ Reeftype, type='response', combine=TRUE) %>%
-  confint() %>% 
-  as.data.frame()
+#emmeans(pshan.glmmT, pairwise ~ Reeftype, type='response') %>%
+#  confint() %>% 
+#  as.data.frame()
 
 # p values
-shanratiopvals <- emmeans(pshan.glmmp,  ~ Reeftype, type='response', combine=TRUE) %>% 
-  pairs() %>% 
-  as.data.frame() 
+#shanratiopvals <- emmeans(pshan.glmmT,  ~ Reeftype, type='response', combine=TRUE) %>% 
+#  pairs() %>% 
+#  as.data.frame() 
 
 # Combine
-shanratios <- bind_cols(shanratios, shanratiopvals[6:7]) 
+#shanratios <- bind_cols(shanratios, shanratiopvals[6:7]) 
 
 # Write to csv
-write_csv(shanratios, file = "../../output/rtables/shanratios.csv")
+#write_csv(shanratios, file = "../../output/rtables/shanratios.csv")
 
 # Copy to html 
-shanratios %>% 
-  tab_df(file="../../output/rtables/shanratios.html", title = "shandance contrasts (ratios)")
-shanratios
+#shanratios %>% 
+#  tab_df(file="../../output/rtables/shanratios.html", title = "shandance contrasts (ratios)")
+#shanratios
 ```
 
 
-# Shannon plot data
+## Plot data
 ```{r shan-plot-data}
 
-shanplotdata <- emmeans(pshan.glmmp, pairwise ~ Reeftype, transform='response') %>%
+shanplotdata <- emmeans(pshan.glmmT, pairwise ~ Reeftype, transform='response') %>%
   confint() %>% 
   as_tibble() 
 
 
-save(shanplotdata, file='../../data/shanplotdata.RData')
+#save(shanplotdata, file='../../data/shanplotdata.RData')
 
 ```
 
@@ -384,17 +508,10 @@ save(shanplotdata, file='../../data/shanplotdata.RData')
 # Community differences
 
 ```{r -community-model}
-getwd()
-source("pred_mvabund.R", local = knitr::knit_global())
+#getwd()
+#source("pred_mvabund.R", local = knitr::knit_global())
 ```
 
-
-
-
-
-```{r}
-
-```
 
 
 
