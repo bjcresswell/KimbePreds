@@ -125,8 +125,12 @@ grid.arrange(hist1, hist2, rtbar, nrow=1)
 - Exaggerated by large schools of large pelagic/semi-pelagic fishes (in particular S. qenie)
 
 # Fit models
-Will start with basic GLMM with site as random factor. Definitely not going to be Gaussian, Gamma (zeros), Beta (not 0-1). Will start with Poisson, Neg Binom, ZI and Tweedie. Will introduce offset later on to account for total fish biomass
+Will start with basic GLMM with site as random factor. Definitely not going to be Gaussian, Gamma (zeros), Beta (not 0-1). 
+Likely going to be a tweedie (a=can't really be Poisson, Neg Bin etc) but will include all of these for testing 
+Will introduce offset later on to account for total fish biomass
 ```{r biom-model-fit, warning=FALSE}
+# Gaussian - fitting anyways 
+biom.glmm <- glmmTMB(Transect_pred_biomass_kg~Reeftype+(1|SiteCode), data=merpredsum)
 # Poisson
 biom.glmmp <- glmmTMB(Transect_pred_biomass_kg~Reeftype+(1|SiteCode), data=merpredsum, family=poisson())
 # Negbinom
@@ -137,61 +141,59 @@ biom.glmmzi <- glmmTMB(Transect_pred_biomass_kg~Reeftype+(1|SiteCode), data=merp
 biom.glmmt <- glmmTMB(Transect_pred_biomass_kg~Reeftype+(1|SiteCode), data=merpredsum, family=tweedie(link = "log"))  
 ```
 
+# Validation with AIC
+```{r biom-aic1}
+AIC(biom.glmm, biom.glmmp, biom.glmmnb2, biom.glmmzi, biom.glmmt)
+```
+
+NB best AIC score but still need the usual diagnostic checks..
+
 
 # Model diagnostics
 ```{r biom-model-diag}
+simulateResiduals(biom.glmm, plot=T) # 
 simulateResiduals(biom.glmmp, plot=T) # 
 simulateResiduals(biom.glmmnb2, plot=T) 
 simulateResiduals(biom.glmmzi, plot=T) 
 simulateResiduals(biom.glmmt, plot=T)
 ```
-- Neg binom or Tweedie best residual fit
+- As expected Tweedie best residual fit although strictly speaking fails dispersion test. Still, we'll work with this family moving forward
 
-# Check using binned residuals:
-```{r biom-binresid}
-binned_residuals(biom.glmmp) #100% within error bounds
-binned_residuals(biom.glmmnb2) #100% within error bounds
-binned_residuals(biom.glmmzi) #100% within error bounds
-binned_residuals(biom.glmmt) #100% within error bounds
+# First will just check that the overdisp isn't coming from zi:
+```{r zit}
+biom.glmmt %>% testZeroInflation() # Looks good
 ```
 
 
-# Validation with AIC
-```{r biom-aic1}
-AIC(biom.glmmp, biom.glmmnb2, biom.glmmzi, biom.glmmt)
-```
-
-NB best fit so will work with this 
 
 # Model tweaking
 Going to add the offset straight away
-```{r biom-nb-offset}
-biom.glmmnboff <- update(biom.glmmnb2, ~ . + offset(log(Transect_fish_biomass_kg)))
+```{r biom-tweedie-offset}
+biom.glmmtoff <- update(biom.glmmt, ~ . + offset(log(Transect_fish_biomass_kg)))
 ```
 
 # Revalidation with AIC
 ```{r biom-aic2}
-AIC(biom.glmmnboff, biom.glmmnb2)
-#binned_residuals(biom.glmmnboff)
+AIC(biom.glmmtoff, biom.glmmt)
 ```
 
 - Offset model better fit
 
 # Check summary
 ```{r}
-#summary(biom.glmmnboff)
+#summary(biom.glmmtoff)
 ```
 
 
 # Results (emmeans and contrasts on response scale - predator biomass)
 ```{r biom-emmeans-results}
 # emmeans and contrasts first
-biomcontrasts <- emmeans(biom.glmmnboff, pairwise ~ Reeftype, transform='response', combine=TRUE) %>%
+biomcontrasts <- emmeans(biom.glmmtoff, pairwise ~ Reeftype, transform='response', combine=TRUE) %>%
   confint() %>% 
   as.data.frame() 
 
 # pvalues
-biompvals <- emmeans(biom.glmmnboff,  ~ Reeftype, transform='response', combine=TRUE) %>% 
+biompvals <- emmeans(biom.glmmtoff,  ~ Reeftype, transform='response', combine=TRUE) %>% 
   pairs() %>% 
   as.data.frame() 
   
@@ -203,7 +205,7 @@ write_csv(biomresults, file = "../../output/rtables/biomresults.csv")
 
 # Copy out to html
 biomresults %>% 
-  tab_df(file="../../output/rtables/biomresults.html", title = "Biomass (kg) contrasts (estimates)") #%>% 
+ tab_df(file="../../output/rtables/biomresults.html", title = "Biomass (kg) contrasts (estimates)") #%>% 
 
 # Display inline
 biomresults
@@ -213,12 +215,12 @@ So non-significant difference between pinnacles and offshore reefs but other con
 # Ratios (using type="response"):
 ```{r biom-emmeans-ratios}
 # Ratios with CI
-biomratios <- emmeans(biom.glmmnboff, pairwise ~ Reeftype, type='response', combine=TRUE) %>%
+biomratios <- emmeans(biom.glmmtoff, pairwise ~ Reeftype, type='response', combine=TRUE) %>%
   confint() %>% 
   as.data.frame()
 
 # p values
-biomratiopvals <- emmeans(biom.glmmnboff,  ~ Reeftype, type='response', combine=TRUE) %>% 
+biomratiopvals <- emmeans(biom.glmmtoff,  ~ Reeftype, type='response', combine=TRUE) %>% 
   pairs() %>% 
   as.data.frame() 
 
@@ -240,7 +242,7 @@ Slightly different story with the ratios - don't know why!!  The story is pretty
 # Create plot data
 Final step is to create the df to be used for plot making 
 ```{r biom-plot-data}
-biomplotdata <- emmeans(biom.glmmnboff, pairwise ~ Reeftype, transform='response') %>%
+biomplotdata <- emmeans(biom.glmmtoff, pairwise ~ Reeftype, transform='response') %>%
   confint() %>% 
   as_tibble() 
 

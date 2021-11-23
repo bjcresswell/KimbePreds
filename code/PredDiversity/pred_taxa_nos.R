@@ -109,8 +109,8 @@ FAMsum # All good
 
 # Check total taxa observed (should be 63)
 TAXsum <- pred.count %>% 
-  group_by(Taxa) %>% 
-  summarise() 
+  dplyr::group_by(Taxa) %>% 
+  dplyr::summarise() 
 TAXsum # All good
 
 # Now to figure out total abundance of each taxa across the whole of Kimbe Bay (need this for sorting data out later on)
@@ -198,7 +198,7 @@ taxabunstat <- tibble(merge(taxabunstat, trophic, by = "Taxa")) %>%
 #  theme(strip.background = element_rect(color="white", size=1.5, linetype="solid"))+
 #  theme(legend.position = 'none')
 
-#rtfambar # Probably not as punchy as presenting top most 12 abundant individual taxa (and can include those 4 most driving differences)...
+#rtfambar # Probably not as punchy as presenting top most X abundant individual taxa (and can also include those most driving differences)...
 
 # 2a. By taxa - top 20 most abundant - not going to use this
 # Filter out top 20 most abundance taxa:
@@ -239,12 +239,22 @@ RTsig
 RTsig$Taxa <- reorder(RTsig$Taxa, -RTsig$sum)
 
 
-# Top 20 most abundant taxa plot
-rtsigbar <- ggplot(data=RTsig, aes(x=Reeftype, y=mean, fill=Reeftype))+
-  geom_bar(stat="identity", colour="black", width=0.8, position=position_dodge(0.8))+
+# Most significant taxa plot - 
+
+
+
+
+
+
+
+
+
+sigtaxabox <- ggplot(data=RTsig, aes(x=Reeftype, y=mean, fill=Reeftype))+
+  geom_boxplot(stat="identity", colour="black", width=0.8, position=position_dodge(0.8))+
   scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D"))+
   theme_classic()+
-  facet_wrap(~factor(Taxa), scales = 'free', ncol = 3)+
+  facet_wrap(~factor(Taxa), scales = 'free', ncol = 3)
+
   geom_errorbar(aes(ymin=mean, ymax=mean+se), width=.2,
                 position=position_dodge(0.8))+
   ylab('Mean predator species abundance (±SE)')+
@@ -257,6 +267,9 @@ rtsigbar <- ggplot(data=RTsig, aes(x=Reeftype, y=mean, fill=Reeftype))+
   theme(legend.position = 'none')
 
 rtsigbar
+
+
+
 
 
  # Save

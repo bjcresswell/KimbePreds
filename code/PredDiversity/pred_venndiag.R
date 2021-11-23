@@ -9,6 +9,8 @@ setwd("/Users/#bjcresswell/OneDrive - James Cook University/Ben PhD/Data & analy
 library(VennDiagram)
 library(plyr)
 library(tidyverse)
+library(ggvenn)
+
 
 # Data
 # Need to start with the preds data (has the a column for reef type as well as taxa)
@@ -27,17 +29,17 @@ unique(preds$Taxa[preds$Reeftype=='Offshore']) # 19 spp total
 
 # Prep data - make a tbl for each reef type and spp present there
 P <- as_tibble(unique(preds$Taxa[preds$Reeftype=='Pinnacle'])) %>% 
-  rename(Taxa=value) %>% 
+  dplyr::rename(Taxa=value) %>% 
   mutate(`Reef type`="Pinnacle") %>% 
   mutate(Pinnacle="Present")
 
 N <-  as_tibble(unique(preds$Taxa[preds$Reeftype=='Nearshore'])) %>% 
-  rename(Taxa=value) %>% 
+  dplyr::rename(Taxa=value) %>% 
   mutate(`Reef type`="Nearshore") %>% 
   mutate(Nearshore="Present")
 
 O <-  as_tibble(unique(preds$Taxa[preds$Reeftype=='Offshore'])) %>% 
-  rename(Taxa=value) %>%
+  dplyr::rename(Taxa=value) %>%
   mutate(`Reef type`="Offshore") %>% 
   mutate(Offshore="Present")
 
@@ -61,7 +63,7 @@ alltaxa <- tibble(join_all(list(totalpredspp, P[-2], N[-2], O[-2]), by="Taxa")) 
   replace(is.na(.), "Absent")
 
 #write_xlsx(alltaxa, "../../output/rtables/taxa_presence_absence.xlsx")
-alltaxa <- read_excel("../../output/rtables/taxa_presence_absence.xlsx")
+#alltaxa <- read_excel("../../output/rtables/taxa_presence_absence.xlsx")
 
 # To find unique spp for each habitat
 # First find pairwise common taxa
@@ -93,27 +95,33 @@ noncommontaxa <- bind_rows(Ponly, Nonly, Oonly) %>%
 Pinnacle <- factor(P$Taxa)
 Nearshore <- factor(N$Taxa)
 Offshore <- factor(O$Taxa)
-  
-pred.ven <- 
-venn.diagram(
-  x = list(Pinnacle, Nearshore, Offshore),
-  category.names = c('Pinnacle (53)', 'Nearshore (22)', 'Offshore (19)'),
-  filename = '../../output/rfigures/preds_venn_fig2.png',
-  output=TRUE,
-  height = 3200,
-  width = 3200,
-  resolution = 300,
-  compression = 'lzw',
-  units = 'px',
-  lwd = 6,
-  cex = 5,
-  fontface = "plain",
-  fontfamily = "sans",
-  cat.cex = 4,
-  cat.fontface = "plain",
-  cat.default.pos = "outer",
-  cat.pos = c(340, 20, 135),
-  cat.dist = c(0.07, 0.07, 0.1),
-  cat.fontfamily = "sans",
-  rotation = 1)
-    
+
+
+
+spp_list <- list(`Pinnacle (53)` = factor(P$Taxa),
+          `Nearshore (22)` = factor(N$Taxa),
+          `Offshore (19)` = factor(O$Taxa))
+
+
+predvenn <- ggvenn(spp_list, show_percentage = FALSE, 
+       fill_color = c("#35978F", "#DFC27D", "#436EEE"),
+       fill_alpha = 0.9,
+       stroke_color = "black",
+       stroke_alpha = 1,
+       stroke_size = 0.6,
+       stroke_linetype = "solid",
+       set_name_color = "black",
+       text_color = "black",
+       set_name_size = 3,
+       text_size = 3)
+
+predvenn
+
+#ggsave(predvenn, filename= '../../output/rfigures/predvenn.pdf', width=4,  height=4, dpi = 1000 )
+
+       
+
+
+
+
+

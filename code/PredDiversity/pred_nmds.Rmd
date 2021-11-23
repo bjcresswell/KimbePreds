@@ -1,0 +1,324 @@
+---
+title: "Preds NMDS work"
+author: "Ben Cresswell"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+  code_folding: show
+  collapse: no
+  df_print: paged
+  fig_caption: yes
+  fig_height: 4
+  fig_width: 4
+  highlight: textmate
+  theme: spacelab
+  toc: yes
+  toc_float: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Created 22 Nov 2021 BJC - following discussions with HBH that NMDS is the preferable ordination technique for these data
+
+Inspiration from https://ourcodingclub.github.io/tutorials/ordination/#section5
+
+# Preliminaries {.tabset .tabset-faded}
+
+## Set up
+```{r setup, include=FALSE, warnings=FALSE, message=FALSE}
+# Rmd setup, directory selection
+knitr::opts_chunk$set(root.dir = "~/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/code/PredDiversity", echo = TRUE)
+getwd()
+```
+
+
+## Housekeeping
+```{r housekeep}
+rm(list=ls())
+graphics.off()
+```
+
+## Packages
+```{r packages}
+library(MASS)
+library(ggdendro)
+library(vegan)
+library(ggvegan)
+library(tidyverse)
+```
+
+# Wrangle in data {.tabset .tabset-faded}
+
+## Load
+Start with predator diversity df - preddiv
+```{r data-load}
+load(file='../../data/preddiv.RData')
+```
+
+## Check
+```{r data-checks}
+head(preddiv) # First column is TID and the spp. observations start at column 11, so we'll need to separate these out
+```
+
+## Create env
+- Pull out the descriptors into an object called env and add in reef type
+```{r create-env}
+env <- preddiv[1:10] %>%
+  mutate(Reeftype = factor(case_when(grepl("BRAD", TID) ~ "Pinnacle",
+                                     grepl("JOEL", TID) ~ "Pinnacle",
+                                     grepl("KBOM", TID) ~ "Pinnacle",
+                                     grepl("INGL", TID) ~ "Pinnacle",
+                                     grepl("LADI", TID) ~ "Nearshore",
+                                     grepl("MADA", TID) ~ "Nearshore",
+                                     grepl("SUSA", TID) ~ "Nearshore",
+                                     grepl("DON", TID) ~ "Nearshore",
+                                     grepl("EMA", TID) ~ "Offshore",
+                                     grepl("HOG", TID) ~ "Offshore",
+                                     grepl("OTT", TID) ~ "Offshore",
+                                     grepl("KIS", TID) ~ "Offshore")))
+```
+
+
+
+## Spp obs
+- Create matrix with only spp observations
+```{r spp-matrix}
+predmatrix <- preddiv[c(1,11:71)] %>% 
+  column_to_rownames("TID") %>%
+  filter_all(any_vars(. != 0)) # Drop transects with only 0 observations (22 in total)
+```
+
+- and convert to distance matrix, based on Bray-Curtis
+```{r distance-matrix}
+preddist <- vegdist(predmatrix,  method = "bray")
+```
+
+However, this won't work with metaMDS
+```{r mds1}
+predNMDS <- metaMDS(preddist, k = 2, trymax = 100, trace = FALSE)
+```
+
+### So probably going to need some sort of transformation or will need to add a small fraction to every score
+
+
+
+
+
+# Transformations {.tabset .tabset-faded}
+
+### Decostand: A function for implementing many of the most effective/popular standardisations in community ecology
+
+## total: 
+- divide by margin total (default MARGIN = 1).
+```{r trans-total}
+preddist_tot <- decostand(preddist, method = "total")
+predNMDS <- metaMDS(preddist_tot, k = 2, trymax = 100, trace = F)
+NMDS1 <- predNMDS$points[,1] ##also found using scores(predNMDS)
+NMDS2 <- predNMDS$points[,2]
+pred.plot<-cbind(predmatrix, NMDS1, NMDS2) %>% 
+  rownames_to_column(var = "TID") %>% 
+  left_join(env, by = "TID", keep = FALSE)
+ggplot(pred.plot, aes(NMDS1, NMDS2, color=Reeftype))+
+  geom_point(position=position_jitter(.1), shape=3)+##separates overlapping points
+  #geom_text(aes(label = TID))+
+  stat_ellipse(type='t',size =1)+ ##draws 95% confidence interval ellipses
+  theme_minimal()
+```
+
+
+
+## max: 
+- divide by margin maximum (default MARGIN = 2).
+```{r trans-max}
+preddist_max <- decostand(preddist, method = "max")
+predNMDS <- metaMDS(preddist_max, k = 2, trymax = 100, trace = F)
+NMDS1 <- predNMDS$points[,1] ##also found using scores(predNMDS)
+NMDS2 <- predNMDS$points[,2]
+pred.plot<-cbind(predmatrix, NMDS1, NMDS2) %>% 
+  rownames_to_column(var = "TID") %>% 
+  left_join(env, by = "TID", keep = FALSE)
+ggplot(pred.plot, aes(NMDS1, NMDS2, color=Reeftype))+
+  geom_point(position=position_jitter(.1), shape=3)+##separates overlapping points
+  #geom_text(aes(label = TID))+
+  stat_ellipse(type='t',size =1)+ ##draws 95% confidence interval ellipses
+  theme_minimal()
+```
+
+## frequency: 
+- divide by margin total and multiply by the number of non-0 items, so that avg of non-0 entries is one (Oksanen 1983; default MARGIN = 2).
+```{r trans-freq}
+preddist_freq <- decostand(preddist, method = "frequency")
+predNMDS <- metaMDS(preddist_freq, k = 2, trymax = 100, trace = F)
+NMDS1 <- predNMDS$points[,1] ##also found using scores(predNMDS)
+NMDS2 <- predNMDS$points[,2]
+pred.plot<-cbind(predmatrix, NMDS1, NMDS2) %>% 
+  rownames_to_column(var = "TID") %>% 
+  left_join(env, by = "TID", keep = FALSE)
+ggplot(pred.plot, aes(NMDS1, NMDS2, color=Reeftype))+
+  geom_point(position=position_jitter(.1), shape=3)+##separates overlapping points
+  #geom_text(aes(label = TID))+
+  stat_ellipse(type='t',size =1)+ ##draws 95% confidence interval ellipses
+  theme_minimal()
+```
+
+## normalize: 
+- make margin sum of squares equal to one (default MARGIN = 1).
+```{r trans-norm}
+preddist_norm <- decostand(preddist, method = "normalize")
+predNMDS <- metaMDS(preddist_norm, k = 2, trymax = 100, trace = F)
+NMDS1 <- predNMDS$points[,1] ##also found using scores(predNMDS)
+NMDS2 <- predNMDS$points[,2]
+pred.plot<-cbind(predmatrix, NMDS1, NMDS2) %>% 
+  rownames_to_column(var = "TID") %>% 
+  left_join(env, by = "TID", keep = FALSE)
+ggplot(pred.plot, aes(NMDS1, NMDS2, color=Reeftype))+
+  geom_point(position=position_jitter(.1), shape=3)+##separates overlapping points
+  #geom_text(aes(label = TID))+
+  stat_ellipse(type='t',size =1)+ ##draws 95% confidence interval ellipses
+  theme_minimal()
+```
+
+
+## range: 
+- standardize values into range 0 ... 1 (default MARGIN = 2). If all values are constant, they will be transformed to 0.
+```{r trans-range}
+preddist_range <- decostand(preddist, method = "range")
+predNMDS <- metaMDS(preddist_range, k = 2, trymax = 100, trace = F)
+NMDS1 <- predNMDS$points[,1] ##also found using scores(predNMDS)
+NMDS2 <- predNMDS$points[,2]
+pred.plot<-cbind(predmatrix, NMDS1, NMDS2) %>% 
+  rownames_to_column(var = "TID") %>% 
+  left_join(env, by = "TID", keep = FALSE)
+ggplot(pred.plot, aes(NMDS1, NMDS2, color=Reeftype))+
+  geom_point(position=position_jitter(.1), shape=3)+##separates overlapping points
+  #geom_text(aes(label = TID))+
+  stat_ellipse(type='t',size =1)+ ##draws 95% confidence interval ellipses
+  theme_minimal()
+```
+
+## rank, rrank: 
+- rank replaces abundance values by their increasing ranks leaving zeros unchanged, and rrank is similar but uses relative ranks with maximum 1 (default MARGIN = 1). Average ranks are used for tied values.
+```{r trans-rank}
+preddist_rank <- decostand(preddist, method = "rrank")
+predNMDS <- metaMDS(preddist_rank, k = 2, trymax = 100, trace = F)
+NMDS1 <- predNMDS$points[,1] ##also found using scores(predNMDS)
+NMDS2 <- predNMDS$points[,2]
+pred.plot<-cbind(predmatrix, NMDS1, NMDS2) %>% 
+  rownames_to_column(var = "TID") %>% 
+  left_join(env, by = "TID", keep = FALSE)
+ggplot(pred.plot, aes(NMDS1, NMDS2, color=Reeftype))+
+  geom_point(position=position_jitter(.1), shape=3)+##separates overlapping points
+  #geom_text(aes(label = TID))+
+  stat_ellipse(type='t',size =1)+ ##draws 95% confidence interval ellipses
+  theme_minimal()
+```
+
+
+## standardize: 
+- scale x to zero mean and unit variance (default MARGIN = 2).
+```{r trans-stdz}
+preddist_std <- decostand(preddist, method = "standardize")
+predNMDS <- metaMDS(preddist_std, k = 2, trymax = 100, trace = F)
+NMDS1 <- predNMDS$points[,1] ##also found using scores(predNMDS)
+NMDS2 <- predNMDS$points[,2]
+pred.plot<-cbind(predmatrix, NMDS1, NMDS2) %>% 
+  rownames_to_column(var = "TID") %>% 
+  left_join(env, by = "TID", keep = FALSE)
+ggplot(pred.plot, aes(NMDS1, NMDS2, color=Reeftype))+
+  geom_point(position=position_jitter(.1), shape=3)+##separates overlapping points
+  #geom_text(aes(label = TID))+
+  stat_ellipse(type='t',size =1)+ ##draws 95% confidence interval ellipses
+  theme_minimal()
+```
+
+## pa: 
+- scale x to presence/absence scale (0/1).
+```{r trans-pa}
+preddist_pa <- decostand(preddist, method = "pa")
+predNMDS <- metaMDS(preddist_pa, k = 2, trymax = 100, trace = F)
+NMDS1 <- predNMDS$points[,1] ##also found using scores(predNMDS)
+NMDS2 <- predNMDS$points[,2]
+pred.plot<-cbind(predmatrix, NMDS1, NMDS2) %>% 
+  rownames_to_column(var = "TID") %>% 
+  left_join(env, by = "TID", keep = FALSE)
+ggplot(pred.plot, aes(NMDS1, NMDS2, color=Reeftype))+
+  geom_point(position=position_jitter(.1), shape=3)+##separates overlapping points
+  #geom_text(aes(label = TID))+
+  stat_ellipse(type='t',size =1)+ ##draws 95% confidence interval ellipses
+  theme_minimal()
+```
+
+## chi.square:
+- divide by row sums and square root of column sums, and adjust for square root of matrix total (Legendre & Gallagher 2001).
+```{r trans-chi2}
+preddist_chi2 <- decostand(preddist, method = "chi.square")
+predNMDS <- metaMDS(preddist_chi2, k = 2, trymax = 100, trace = F)
+NMDS1 <- predNMDS$points[,1] ##also found using scores(predNMDS)
+NMDS2 <- predNMDS$points[,2]
+pred.plot<-cbind(predmatrix, NMDS1, NMDS2) %>% 
+  rownames_to_column(var = "TID") %>% 
+  left_join(env, by = "TID", keep = FALSE)
+ggplot(pred.plot, aes(NMDS1, NMDS2, color=Reeftype))+
+  geom_point(position=position_jitter(.1), shape=3)+##separates overlapping points
+  #geom_text(aes(label = TID))+
+  stat_ellipse(type='t',size =1)+ ##draws 95% confidence interval ellipses
+  theme_minimal()
+```
+
+## hellinger: 
+- square root of method = "total" (Legendre & Gallagher 2001).
+```{r trans-helling}
+preddist_helling <- decostand(preddist, method = "hellinger")
+predNMDS <- metaMDS(preddist_helling, k = 2, trymax = 100, trace = F)
+NMDS1 <- predNMDS$points[,1] ##also found using scores(predNMDS)
+NMDS2 <- predNMDS$points[,2]
+pred.plot<-cbind(predmatrix, NMDS1, NMDS2) %>% 
+  rownames_to_column(var = "TID") %>% 
+  left_join(env, by = "TID", keep = FALSE)
+ggplot(pred.plot, aes(NMDS1, NMDS2, color=Reeftype))+
+  geom_point(position=position_jitter(.1), shape=3)+##separates overlapping points
+  #geom_text(aes(label = TID))+
+  stat_ellipse(type='t',size =1)+ ##draws 95% confidence interval ellipses
+  theme_minimal()
+```
+
+## log: 
+- logarithmic transformation as suggested by Anderson et al. (2006): log_b (x) + 1 for x > 0, where b is the base of the logarithm; zeros are left as zeros. Higher bases give less weight to quantities and more to presences, and logbase = Inf gives the presence/absence scaling. Please note this is not log(x+1). Anderson et al. (2006) suggested this for their (strongly) modified Gower distance (implemented as method = "altGower" in vegdist), but the standardization can be used independently of distance indices.
+```{r trans-log}
+preddist_log <- decostand(preddist, method = "log")
+predNMDS <- metaMDS(preddist_log, k = 2, trymax = 100, trace = F)
+NMDS1 <- predNMDS$points[,1] ##also found using scores(predNMDS)
+NMDS2 <- predNMDS$points[,2]
+pred.plot<-cbind(predmatrix, NMDS1, NMDS2) %>% 
+  rownames_to_column(var = "TID") %>% 
+  left_join(env, by = "TID", keep = FALSE)
+ggplot(pred.plot, aes(NMDS1, NMDS2, color=Reeftype))+
+  geom_point(position=position_jitter(.1), shape=3)+##separates overlapping points
+  #geom_text(aes(label = TID))+
+  stat_ellipse(type='t',size =1)+ ##draws 95% confidence interval ellipses
+  theme_minimal()
+```
+
+
+
+
+
+
+
+
+
+```{r}
+predmatrix <- preddiv[c(1,11:71)] %>% 
+  column_to_rownames("TID") %>%
+  filter_all(any_vars(. != 0)) %>% # Drop 22 transects with only 0 observations
+  +0.00001
+```
+
+
+
+

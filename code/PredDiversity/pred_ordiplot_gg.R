@@ -7,7 +7,7 @@
 # Also some inspiration from https://ourcodingclub.github.io/tutorials/ordination/#section5
 
 # Housekeeping
-#rm(list=ls())
+rm(list=ls())
 graphics.off()
 
 # Packages

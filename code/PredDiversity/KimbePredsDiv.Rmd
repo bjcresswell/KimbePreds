@@ -1,5 +1,5 @@
 ---
-title: "Kimbe Bay Coral Reef Predator \n Fish Diversity Anslysis"
+title: "Kimbe Bay Coral Reef Predator \n Fish Diversity Analysis"
 author: "Ben Cresswell"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
@@ -331,9 +331,16 @@ Will use gaussian and tweedie distributions and check.
 ## Gaussian and Tweedie 
 ```{r shan-fitmodel}
 # Gaussian (trying post ML2021)
-pshan.glmm <- glmmTMB(Shannon ~ Reeftype+(1|Site), data = preddiv, family=gaussian(link = 'identity'), ziformula = ~0,  REML = TRUE)
+pshan.glmm <- glmmTMB(Shannon ~ Reeftype+(1|Site), data = preddiv, family=gaussian(), ziformula = ~0,  REML = FALSE)
 pshan.glmmT <- glmmTMB(Shannon ~ Reeftype+(1|Site), data = preddiv, family=tweedie(link = 'log'), ziformula = ~0, REML = FALSE)
 ```
+## AIC 
+
+```{r shan-model-aic}
+AIC(pshan.glmm, pshan.glmmT)
+```
+
+-> Gaussian better AIC score but let's do the other diagnostics...
 
 
 ## DHARMa residuals
@@ -357,8 +364,8 @@ pshan.glmmRE = glmmTMB(Shannon ~ 1 + (1|Site), data = preddiv, family='tweedie',
 ```
 
 
-##  AIC
-```{r shan-model-aic}
+##  AIC with RE
+```{r shan-model-aicRE}
 AIC(pshan.glmmT, pshan.glmmRE)
 ```
 -> Full model outperforms RE-only model

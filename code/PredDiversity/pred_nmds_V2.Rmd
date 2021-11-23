@@ -1,0 +1,282 @@
+---
+title: "Preds NMDS work - all 0 rows left in, fraction added"
+author: "Ben Cresswell"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+  code_folding: show
+  collapse: no
+  df_print: paged
+  fig_caption: yes
+  fig_height: 4
+  fig_width: 4
+  highlight: textmate
+  theme: spacelab
+  toc: yes
+  toc_float: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+# Created 22 Nov 2021 BJC - following discussions with HBH that NMDS is the preferable ordination technique for these data
+Inspiration from https://ourcodingclub.github.io/tutorials/ordination/#section5
+
+
+
+# Preliminaries {.tabset .tabset-faded}
+
+## Set up
+```{r setup, include=FALSE, warnings=FALSE, message=FALSE}
+# Rmd setup, directory selection
+knitr::opts_chunk$set(root.dir = "~/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/code/PredDiversity")
+getwd()
+```
+
+
+## Housekeeping
+```{r housekeep}
+rm(list=ls())
+graphics.off()
+```
+
+
+## Packages
+```{r packages}
+library(MASS)
+library(ggdendro)
+library(vegan)
+library(ggvegan)
+library(tidyverse)
+```
+
+# Wrangle in data {.tabset .tabset-faded}
+
+## Load
+Start with predator diversity df - preddiv
+```{r data-load}
+load(file='../../data/preddiv.RData')
+```
+
+## Check
+```{r data-checks}
+head(preddiv)
+```
+
+First column is TID, followed by grouping/environmental descriptors and diversity metrics etc.
+The species observations start at column 11
+We'll need to separate all these out (metaMDS only works on a matrix of spp observations)
+
+
+## Create env
+- Pull out the descriptors into an object called env and add in reef type
+```{r create-env}
+env <- preddiv[1:10] %>%
+  mutate(Reeftype = factor(case_when(grepl("BRAD", TID) ~ "Pinnacle",
+                                     grepl("JOEL", TID) ~ "Pinnacle",
+                                     grepl("KBOM", TID) ~ "Pinnacle",
+                                     grepl("INGL", TID) ~ "Pinnacle",
+                                     grepl("LADI", TID) ~ "Nearshore",
+                                     grepl("MADA", TID) ~ "Nearshore",
+                                     grepl("SUSA", TID) ~ "Nearshore",
+                                     grepl("DON", TID) ~ "Nearshore",
+                                     grepl("EMA", TID) ~ "Offshore",
+                                     grepl("HOG", TID) ~ "Offshore",
+                                     grepl("OTT", TID) ~ "Offshore",
+                                     grepl("KIS", TID) ~ "Offshore")))
+```
+
+
+## Spp obs
+- Create matrix with only spp observations
+```{r spp-matrix}
+predmatrix <- preddiv[c(1,11:73)] %>%  # Keep TID in
+  column_to_rownames("TID") %>%        # And then set as row names
+    +0.01 #%>%
+  #filter_all(any_vars(. != 0)) # Drop transects with only 0 observations (22 in total)
+```
+
+- and convert to distance matrix, based on Bray-Curtis
+```{r distance-matrix}
+preddist <- vegdist(predmatrix,  method = "bray")
+```
+
+# Create NMDS:
+
+Run mds on preddist
+```{r mds1}
+predNMDS <- metaMDS(preddist, k = 2, trymax = 100, trace = FALSE) 
+# Check
+predNMDS # Works - Stress 0.15
+```
+
+## Stressplot
+```{r}
+stressplot(predNMDS)
+```
+
+## Basic plot
+### Pull out scores etc
+```{r mds2}
+NMDS1 <- predNMDS$points[,1] ##also found using scores(predNMDS)
+NMDS2 <- predNMDS$points[,2]
+pred.plot<-cbind(predmatrix, NMDS1, NMDS2) %>% 
+  rownames_to_column(var = "TID") %>% 
+  left_join(env, by = "TID", keep = FALSE)
+```
+
+### And plot
+```{r mds-plot1}
+ggplot(pred.plot, aes(NMDS1, NMDS2, color=Reeftype))+
+  geom_point(position=position_jitter(.1), shape=3)+##separates overlapping points
+  #geom_text(aes(label = TID))+
+  stat_ellipse(type='t',size =1)+ ##draws 95% confidence interval ellipses
+  theme_minimal()
+
+```
+
+
+
+# Investigation
+
+## Extract species scores
+```{r}
+species.scores <- as.data.frame(scores(predNMDS, "species"))  # Using the scores function from vegan to extract the species scores and convert to a data.frame
+```
+-> Doesn't work!! No species scores included as we ran this on the distance object we created from spp observations, which dropped the species from the object.
+
+But we can run the mds again on predmatrix rather than preddist as long as autotransform is turned off:
+
+```{r}
+set.seed(2)
+predNMDS <- metaMDS(predmatrix, k = 2, trymax = 100, trace = FALSE, autotransform = FALSE, distance="bray")
+```
+
+## Check that spp scores can be extracted
+```{r}
+as.data.frame(scores(predNMDS, "species")) %>% 
+  head
+```
+
+Now spp scores can be extracted, along with site etc.
+
+
+# Extract data scores: {.tabset .tabset-faded}
+
+## Species scores
+```{r}
+species.scores <- as.data.frame(scores(predNMDS, "species")) %>% 
+  rownames_to_column(var = "species")
+```
+
+And need to filter out the most important ones:
+```{r}
+
+species.scores <- species.scores %>% 
+  filter(species %in% c("Sphyraena qenie", "Caranx sexfasciatus", "Macolor macularis",
+                        "Caranx melampygus", "Lutjanus gibbus", "Cephalopholis cyanostigma"))
+
+
+```
+
+
+## Adjust for plotting
+And need to make separate columns with 'coords' for the labels, so that they dodge the other information on the final graph
+
+1. C mel
+2. C sex
+3. L gib
+4. M mac
+5. C cya
+6. S qen 
+
+```{r}
+#             1      2       3       4       5        6
+Coord_1 <- c(-2.6,	-4.2,	 -2.1,	  -2.6,	   1.2,	     -6.5)
+Coord_2 <- c(-0.2,	0.2,	   0.9,	   0.5,	  -0.1,	   -0.7)
+
+
+species.labels <- species.scores %>% 
+  mutate(Coord_1 = Coord_1,
+         Coord_2 = Coord_2)
+
+```
+
+## Site scores
+```{r}
+data.scores <- as.data.frame(scores(predNMDS))  # Scores function from vegan extracts the site scores -> data.frame
+data.scores$TID <- rownames(data.scores)  # create a column of site names, from the rownames of data.scores
+data.scores$grp <- env$Reeftype  #  going to want to group by reef type
+
+shannon <- env %>% 
+  dplyr::select("TID", "Shannon")
+
+
+
+data.scores <- data.scores %>% 
+  full_join(shannon, by = "TID")
+#head(data.scores)  #look at the data
+```
+
+# Plot
+
+```{r}
+pred_nmds_plot <-
+  ggplot(data.scores, aes(NMDS1, NMDS2)) + # Each individual TID score in NMDS space
+  geom_point(aes(colour = grp, shape = grp), alpha=0.6, position=position_jitter(.1)) +  # grouping by reef type (grp)
+  # geom_point(aes(colour = grp, shape = grp, size=Shannon), alpha=0.6, position=position_jitter(.1)) +  # or could even include scale by Shannon score
+  xlim(-8,2.5)+
+  ylim(-3, 3)+
+  scale_color_manual(values=c("#DFC27D", "#436EEE", "#35978F"))+ # The classic Kimbe colour scheme
+  scale_fill_manual(values=c("#DFC27D", "#436EEE", "#35978F"))+ # The classic Kimbe colour scheme
+  scale_shape_manual(values=c(16, 8, 17))+                       # and classic Kimbe pch scheme
+  stat_ellipse(geom = "polygon", aes(colour = grp, fill = grp), alpha=0.1, type='t',size =0.8) +          # 95% conf ellipses
+  stat_ellipse(aes(colour = grp), alpha=1, type='t',size =0.8) +          # 95% conf ellipses
+  geom_point(data = species.scores, aes(NMDS1, NMDS2), pch = 15, size = 2,
+             position=position_jitter(0.1)) +                    # Pts for Spp scores for top 6 taxa
+  geom_text(data = species.labels, aes(Coord_1, Coord_2, label = species), size = 4, fontface = "italic") + # Text for these           
+  #geom_segment(data = species.scores, aes(x = 0, y = 0, xend = NMDS1, yend = NMDS2),                # And arrows
+    #           arrow = arrow(length = unit(0.2, 'cm')), colour = "black", alpha=0.6)+
+  #geom_text(aes(label = TID), size = 2)+  
+  geom_hline(yintercept = 0, linetype=2, alpha=0.3) +     # 0 on y axis
+  geom_vline(xintercept = 0, linetype=2, alpha=0.3) +     # 0 on x axis
+  theme_classic()+                        # White fill
+  theme(
+    axis.line = element_blank(), 
+    panel.border = element_rect(size = 1, fill = "transparent"),
+    legend.title = element_blank(),
+    legend.text = element_text(face = "plain", size = 10),
+    legend.position = c(.1,.13),
+    legend.background = element_rect(fill = "transparent"),
+    legend.box.background = element_rect(colour = "black"),
+    legend.spacing.y = unit(0.1, "mm"),
+    legend.key.size = unit(5, "mm")
+    )
+
+pred_nmds_plot
+
+#ggsave(pred_nmds_plot, filename= '../../output/rfigures/prednmds.pdf', width=6.5,  height=4, dpi = 600)
+```
+
+
+
+## Add the venn diagram in as a grob file (see separate script for venn diag creation)
+
+```{r}
+nmdsvenn <- 
+pred_nmds_plot + annotation_custom(
+    ggplotGrob(predvenn), 
+    xmin = -13, xmax =0, ymin = -0.2, ymax = 3.2)
+
+nmdsvenn
+ggsave(nmdsvenn, filename= '../../output/rfigures/nmdsvenn_2.pdf', width=8,  height=5, dpi = 1000 )
+
+```
+
+
+
+
+
+
+
+
+
