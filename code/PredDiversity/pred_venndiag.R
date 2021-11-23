@@ -3,7 +3,9 @@
 # Last edit 9 Sept 2021
 
 # Setwd
-setwd("/Users/#bjcresswell/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/code/PredDiversity")
+setwd("/Users/bjcresswell/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/code/PredDiversity")
+getwd()
+
 
 # Packages
 library(VennDiagram)

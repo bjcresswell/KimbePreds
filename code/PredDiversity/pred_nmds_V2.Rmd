@@ -254,7 +254,7 @@ pred_nmds_plot <-
 
 pred_nmds_plot
 
-#ggsave(pred_nmds_plot, filename= '../../output/rfigures/prednmds.pdf', width=6.5,  height=4, dpi = 600)
+#ggsave(pred_nmds_plot, filename= '../../output/rfigures/prednmds.pdf',  width = 174, height = 109, units = "mm", dpi = 600)
 ```
 
 
@@ -268,7 +268,7 @@ pred_nmds_plot + annotation_custom(
     xmin = -13, xmax =0, ymin = -0.2, ymax = 3.2)
 
 nmdsvenn
-ggsave(nmdsvenn, filename= '../../output/rfigures/nmdsvenn_2.pdf', width=8,  height=5, dpi = 1000 )
+ggsave(nmdsvenn, filename= '../../output/rfigures/nmdsvenn.png',  width = 174, height = 109, units = "mm", dpi = 1000 )
 
 ```
 

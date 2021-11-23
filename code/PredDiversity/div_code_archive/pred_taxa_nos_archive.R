@@ -246,11 +246,8 @@ RTsig$Taxa <- reorder(RTsig$Taxa, -RTsig$sum)
 
 
 
-
-
-
-sigtaxabox <- ggplot(data=RTsig, aes(x=Reeftype, y=mean, fill=Reeftype))+
-  geom_boxplot(stat="identity", colour="black", width=0.8, position=position_dodge(0.8))+
+sigtaxaplot <- ggplot(data=RTsig, aes(x=Reeftype, y=mean, fill=Reeftype))+
+  geom_point(stat="identity", colour="black", width=0.8, position=position_dodge(0.8))+
   scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D"))+
   theme_classic()+
   facet_wrap(~factor(Taxa), scales = 'free', ncol = 3)
