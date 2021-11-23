@@ -2,8 +2,8 @@
 .Rhistory
 .RData
 .Ruserdata
-.hidden
+
 .DS_Store
+.Rproj
 archive/
-Archive/
-junk/
+scratch/
