@@ -2,6 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
-.archive
+archive/
 .Archive
 .hidden
+.DS_Store
