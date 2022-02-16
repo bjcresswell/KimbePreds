@@ -214,7 +214,7 @@ shannon <- env %>%
 
 data.scores <- data.scores %>% 
   full_join(shannon, by = "TID")
-#head(data.scores)  #look at the data
+head(data.scores)  #look at the data
 ```
 
 # Plot

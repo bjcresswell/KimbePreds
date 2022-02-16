@@ -17,7 +17,7 @@
 
 # Housekeeping
 setwd("/Users/bjcresswell/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/code/PredDiversity")
-#rm(list=ls())
+rm(list=ls())
 
 library(writexl)
 library(readxl)
@@ -29,11 +29,12 @@ preds
 
 # Make a count df - for each Taxa/TID combination there will be a count generated
 pred.count1 <- preds %>% 
-  group_by(TID, Family, Taxa) %>% # Group including family for use in taxa_nos analysis later
+  group_by(TID, Taxa) %>% # Group including family for use in taxa_nos analysis later
   dplyr::summarise(Count=sum(Number))
+
 pred.count1 # 370 rows
 
-# If all taxa observed on all transects then should be 63 * 5(trans) * 2(surv) * 12(site) = 7560 rows
+# If all taxa observed on all transects then should be 7560 rows -> 63 * 5(trans) * 2(surv) * 12(site)
 # Need to wrangle back in by forcing at least one entry per TID/taxa combination back in:
 pred.count2 <- pred.count1 %>% 
   group_by(Taxa) %>% 
@@ -41,9 +42,19 @@ pred.count2 <- pred.count1 %>%
 pred.count2 # Right number of rows but no families for a lot of the taxa
 
 # Merge back with first df and remove any duplicates
-pred.count <- tibble(merge(pred.count2[c(1,2,4)], pred.count1[2:3], by="Taxa", no.dups = TRUE, all.y = FALSE)) %>% 
+pred.count <- tibble(merge(pred.count2[c(1,2,5)], pred.count1[2:4], by="TID", no.dups = TRUE, all.y = FALSE)) %>% 
   distinct()
 pred.count # Now have all the zero observations back in - 7560 rows. Can conduct analysis on this (mean, SE etc)
+
+
+
+
+pred.count <- tibble(merge(pred.count2, preds[c(1,8)], by="Taxa", no.dups = TRUE, all.y = FALSE)) %>% 
+  distinct()
+
+
+
+
 
 # Now wrangle back in some useful columns
 pred.count <- pred.count %>% 
@@ -96,22 +107,19 @@ pred.count
 # Checks
 
 # Check we have 120 Transects represented (12*2*5)
-TIDsum <- pred.count %>% 
+pred.count %>% 
   group_by(TID) %>% 
   summarise()
-TIDsum # All good
 
 # Check we have 13 families
-FAMsum <- pred.count %>% 
+pred.count %>% 
   group_by(Family) %>% 
   summarise_each(funs(sum), Count)
-FAMsum # All good
 
 # Check total taxa observed (should be 63)
-TAXsum <- pred.count %>% 
-  dplyr::group_by(Taxa) %>% 
-  dplyr::summarise() 
-TAXsum # All good
+pred.count %>% 
+  group_by(Taxa) %>% 
+  summarise() 
 
 # Now to figure out total abundance of each taxa across the whole of Kimbe Bay (need this for sorting data out later on)
 TAXcount <- pred.count %>% 
@@ -121,114 +129,30 @@ TAXcount <- pred.count %>%
 TAXcount # 63 rows, one per taxa
 
 # Total individual fish observations for the whole study - 2560
-TAXcount %>% summarise_each(funs(sum), Count) 
+TAXcount %>% 
+  summarise_each(funs(sum), Count) 
+
 # Or can check against preds df:
-preds %>% summarise_each(funs(sum), Number) # Also 2560
+preds %>% 
+  summarise_each(funs(sum), Number) # Also 2560
 
-# Total abundance of each predator fish family by transect (would need this to work out )
-TIDfam <- pred.count %>% 
-  group_by(Reeftype, Family, TID) %>% 
-  summarise_each(funs(sum), Count) %>% 
-  complete(TID, fill = list(Count = 0))
-TIDfam # 13 families * 120 transects = 1560 rows
 
-# Mean ± sd/se abundance of each predator fish family by reef type - used for family abundance bar plot
-RTfam <- pred.count %>% 
-  group_by(Family, Reeftype) %>% 
-  summarise_each(funs(mean,sd,se=sd(.)/sqrt(n())), Count) %>% 
-  merge(FAMsum, by = "Family") %>% 
-  arrange(-Count)
 
-RTfam # Should be 39 rows (3 reef types x 13 families)
-# This df used for plotting below so reorder by abundance
-RTfam$Family <- reorder(RTfam$Family, -RTfam$mean)
+# Mean/SD etc for each taxa by reeftype
 
-# Mean ± sd/se abundance of each predator fish taxa by reef type - used for taxa abundance bar plot - don't need
 RTtax <- pred.count %>% 
   group_by(Family, Taxa, Reeftype) %>% 
   summarise_each(funs(sum, mean,sd,se=sd(.)/sqrt(n())), Count)
 RTtax # 189 rows - 63 taxa * 3 reef types
 
-# Create df with one row for each taxa, with mean±SE - using pivot_wider in dplyr
-taxabun <- RTtax %>% 
-  pivot_wider(id_cols = c(Family, Taxa), names_from = Reeftype, values_from = c(mean, se))
-taxabun
 
-# Merge with total abundance (across whole study site) by taxa
-taxabunsum <- tibble(merge(taxabun, TAXcount, by = "Taxa"))
-taxabunsum
 
-# Can merge this with the df from the multivariate abundance analysis - with LRT and P values for taxa driving differences
-# Load
-taxaLRT <- read_excel("../../output/rtables/taxa_LRT_mvabund.xlsx", 1)
+# This for all preds - can merge  with the  LRT and P values from the multivariate abundance analysis to pull out taxa driving differences
+ 
+# Load file
 load(file = "../../data/mvabund_unitests.RData")
-# and combine
-taxabunstat <- tibble(merge(taxabunsum, unitests, by = "Taxa"))
-taxabunstat
 
-# Merge with trophic group information
-# First extract from the preds df
-trophic <- preds %>% 
-  group_by(Taxa, `Trophic Group`) %>% 
-  summarise()
-
-# and combine
-taxabunstat <- tibble(merge(taxabunstat, trophic, by = "Taxa")) %>% 
-  arrange(-Count)
-
-#write_xlsx(taxabunstat[c(1,2,12,3,6,4,7,5,8:11)], "../../output/rtables/taxa_abun_by_reeftype.xlsx")
-
-
-# Plots
-
-# 1. By family - not going to run this for final analysis.
-#rtfambar <- ggplot(data=RTfam[1:27,], aes(x=Reeftype, y=mean, fill=Reeftype))+
-#  geom_bar(stat="identity", colour="black", width=0.8, position=position_dodge(0.8))+
-#  scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D"))+
-#  theme_classic()+
-#  facet_wrap(~Family, scales = 'free', ncol = 3)+
-#  geom_errorbar(aes(ymin=mean, ymax=mean+se), width=.2,
-#                position=position_dodge(0.8))+
-#  ylab('Mean predator family abundance (±SE)')+
-#  xlab('')+
-#  #geom_text(aes( label = mean, y = mean ), vjust = 1.5, size = 3, color = "white" )+
-#  theme(axis.title.y = element_text(family="Arial", size=14, colour = 'black', vjust = 1.8),
-#        axis.text = element_text(family="Arial", size= 9, colour = 'black'))+
-#  theme(strip.text.x = element_text(family="Arial", size = 14, color = "black", hjust = -0.02))+
-#  theme(strip.background = element_rect(color="white", size=1.5, linetype="solid"))+
-#  theme(legend.position = 'none')
-
-#rtfambar # Probably not as punchy as presenting top most X abundant individual taxa (and can also include those most driving differences)...
-
-# 2a. By taxa - top 20 most abundant - not going to use this
-# Filter out top 20 most abundance taxa:
-#top20 <- tibble(TAXcount[1:20,])
-#RT20abun <- tibble(merge(RTtax, top20, by = "Taxa"))
-# And reorder based on abundance
-#RT20abun$Taxa <- reorder(RT20abun$Taxa, -RT20abun$Count)
-
-# Top 20 most abundant taxa plot
-#rt20abunbar <- ggplot(data=RT20abun, aes(x=Reeftype, y=mean, fill=Reeftype))+
-#  geom_bar(stat="identity", colour="black", width=0.8, position=position_dodge(0.8))+
-#  scale_fill_brewer(palette="Greys", direction=-1)+
-#  theme_classic()+
-#  facet_wrap(~factor(Taxa), scales = 'free', ncol = 5)+
-#  geom_errorbar(aes(ymin=mean, ymax=mean+se), width=.2,
-#                position=position_dodge(0.8))+
-#  ylab('Mean predator species abundance (±SE)')+
-#  xlab('')+
-#  #geom_text(aes( label = mean, y = mean ), vjust = 1.5, size = 3, color = "white" )+
-#  theme(axis.title.y = element_text(family="Arial", size=14, colour = 'black', vjust = 1.8),
-#        axis.text = element_text(family="Arial", size= 9, colour = 'black'))+
-#  theme(strip.text.x = element_text(family="Arial", face = "italic", size = 14, color = "black", hjust = -0.02))+
-#  theme(strip.background = element_rect(color="white", size=1.5, linetype="solid"))+
-#  theme(legend.position = 'none')
-
-#rt20abunbar
-
-
-# 2b. By taxa - only the significant drivers of community difference
-# Filter out significant taxa:
+# Merge
 RTsig <- tibble(merge(RTtax, unitests, by = "Taxa")) %>%
   filter(Pvals <= 0.05)
 
@@ -238,42 +162,59 @@ RTsig
 # And reorder based on abundance
 RTsig$Taxa <- reorder(RTsig$Taxa, -RTsig$sum)
 
-
-# Most significant taxa plot - 
-
+load("../../data/barracuda.png")
 
 
 
+# Plot
 
+library(cowplot)
 
+theme_set(theme_cowplot())
 
-
-
-sigtaxabox <- ggplot(data=RTsig, aes(x=Reeftype, y=mean, fill=Reeftype))+
-  geom_boxplot(stat="identity", colour="black", width=0.8, position=position_dodge(0.8))+
+sigtaxaplot <- 
+ggplot(data=RTsig, aes(x=Reeftype, y=mean, fill=Reeftype))+
+  geom_point(aes(shape = Reeftype),stat="identity", colour="black", size = 5)+
+  scale_shape_manual(values=c(24, 21, 22))+                       # had to adapt Kimbe pch scheme
   scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D"))+
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.2)+
   theme_classic()+
-  facet_wrap(~factor(Taxa), scales = 'free', ncol = 3)
-
-  geom_errorbar(aes(ymin=mean, ymax=mean+se), width=.2,
-                position=position_dodge(0.8))+
-  ylab('Mean predator species abundance (±SE)')+
+  facet_wrap(~factor(Taxa), scales = 'free', ncol = 3) +
+  ylab('Mean predator fish species abundance (±SE)')+
   xlab('')+
   #geom_text(aes( label = mean, y = mean ), vjust = 1.5, size = 3, color = "white" )+
-  theme(axis.title.y = element_text(family="Arial", size=14, colour = 'black', vjust = 1.8),
-        axis.text = element_text(family="Arial", size= 9, colour = 'black'))+
-  theme(strip.text.x = element_text(family="Arial", face = "italic", size = 14, color = "black", hjust = -0.02))+
+  theme(axis.title.y = element_text(family="Helvetica", size=10, colour = 'black', vjust = 1.8),
+        axis.text = element_text(family="Helvetica", size= 9, colour = 'black'))+
+  theme(strip.text.x = element_text(family="Helvetica", face = "italic", size = 10, color = "black", hjust = -0.02))+
   theme(strip.background = element_rect(color="white", size=1.5, linetype="solid"))+
-  theme(legend.position = 'none')
+  theme(legend.position = 'none')+
+  guides(colour = FALSE, fill = FALSE, shape = FALSE)#+  
+  #theme_cowplot()
+  
+  
 
-rtsigbar
+sigtaxaplot
 
+
+# Save
+# Coral reefs dims: Width max: 174mm Height max; 234mm
+ggsave(sigtaxaplot, filename= '../../output/rfigures/sigtaxaplot.png', width = 174, height = 109, units = "mm", dpi = 1000 )
+
+
+
+
+
+
+library(cowplot)
+library(magick)
+
+ggdraw() +
+  draw_image("../../data/barracuda", x = 0.28, y = 0.4, scale = .15) +
+  draw_plot(sigtaxaplot)
 
 
 
 
  # Save
-#ggsave(rtfambar, filename= '../../output/rfigures/family_bar_fig.png', width=11,  height=7, dpi = 1000 )
 #ggsave(rt20abunbar, filename= '../../output/rfigures/taxa_topabun20_bar_fig.png', width=12,  height=6, dpi = 1000 )
-ggsave(rtsigbar, filename= '../../output/rfigures/taxa_sig_bar_fig.svg', width=12,  height=6, dpi = 1000 )
 
