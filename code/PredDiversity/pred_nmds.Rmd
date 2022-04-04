@@ -249,7 +249,7 @@ pred_nmds_plot <-
     legend.background = element_rect(fill = "transparent"),
     legend.box.background = element_rect(colour = "black"),
     legend.spacing.y = unit(0.1, "mm"),
-    legend.key.size = unit(5, "mm")
+    legend.key.size = unit(1, "mm")
     )
 
 pred_nmds_plot
@@ -273,6 +273,12 @@ nmdsvenn
 ```
 
 
+```{r}
+
+
+
+
+```
 
 
 

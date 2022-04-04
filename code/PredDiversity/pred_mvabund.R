@@ -53,9 +53,11 @@ par(predabund) # Have to set up viewing pane for some reason.. (also necessary f
 meanvar <- meanvar.plot(predabund) 
 # Strong MV relationship - expected from this type of count data and would point to Poisson or neg binom distribution as you'd expect
 
-# Basic overview of main species abundance differences across reef type
+# Basic overview of main species abundance differences across reef type:
+
+specabuntran <- plot(predabund~predenv$Reeftype) # By default applies log transformation, gives you top 10-12. Without transformation you get:
 #specabun <- plot(predabund~preddiv$Reeftype, transformation="no")
-specabuntran <- plot(predabund~predenv$Reeftype) # By default applies log transformation, gives you top 10-12
+
 
 
 # 3. Model fitting
@@ -63,8 +65,10 @@ specabuntran <- plot(predabund~predenv$Reeftype) # By default applies log transf
 
 # Poisson model
 mvmodpois <- manyglm(predabund ~ predenv$Reeftype, test="LR", family="poisson")
+
 # Neg binom model
 mvmodnb <- manyglm(predabund ~ predenv$Reeftype, test="LR", family="negative_binomial")
+
 
 
 # 4. Model validation 
@@ -73,14 +77,33 @@ plot(mvmodpois) # Looks like there may be a curved pattern
 plot(mvmodnb) # Negbinom good residuals
 
 # Check AIC scores
-AIC(mvmodpois, mvmodnb) # Negbinom better so will move forward with that
+AIC(mvmodpois, mvmodnb)
+
+# Neg binom going to be a better fit but...
+
+# Big question: how to take into account random effect of site?
+
+# Option A (not really an option): mixed model variation:
+
+# Any attempt to fit GLMM just crashes computer!!!!
+#mvmodnbmm <- manyglm(predabund ~ predenv$Reeftype + 1|predenv$Site, test="LR", family="negative_binomial")
+
+# Option B: include site as an interaction term in model formula
+
+mvmodint <- manyglm(predabund ~ predenv$Reeftype*predenv$Site, test="LR", family="negative_binomial")
+AIC(mvmodint, mvmodnb) 
+
+# Model with interaction scores worse (but prob could have predicted this as it's a less parsimonious model)
+# Will see what the output is in the anova below
 
 
-# 5. Model investigation and hypothesis testing
-# So need permute package to conduct resampling based on "Site"
+# Option C: some permutational approach
 # Below code sourced from http://edild.github.io/mvabund/ 
 
+# Need permute package
 library(permute)
+
+# Conduct resampling based on "Site"
 control <- how(within = Within(type = 'none'),
                plots = Plots(strata = predenv$Site, type = 'free'),
                nperm = 999)
@@ -88,25 +111,60 @@ permutations <- shuffleSet(nrow(predenv), control = control)
 
 
 # Pairwise comparisons (uni and multivariate) extracted using anova.manyglm function:
+
+# Using the bootID argument:
 #modelaovpairwise <- anova.manyglm(mvmodnb, bootID = permutations, pairwise.comp = predenv$Reeftype, p.uni="adjusted")
 # Very slow to run -save results for use later
-
-
 #save(modelaovpairwise, file = "../../data/mvabundaov.rda") # Last run and save 31/10/21
 load(file = "../../data/mvabundaov.rda")
-
-# Results overview
+# Results
 modelaovpairwise
 
-# 1. Details - multivariate
+
+# What about using montecarlo resampling in the anova method?
+#modelaovpairwise2 <- anova.manyglm(mvmodnb, resamp="montecarlo", pairwise.comp = predenv$Reeftype, p.uni="adjusted")
+# Again, very slow to run -save results for use later
+#save(modelaovpairwise2, file = "../../data/mvabundaov2.rda") # Last run and save 4/4/22
+load(file = "../../data/mvabundaov2.rda")
+# Results
+modelaovpairwise2
+
+
+# What about the model with the interaction term?
+#modelaovpairwise3 <- anova.manyglm(mvmodint, resamp="montecarlo", pairwise.comp = predenv$Reeftype, p.uni="adjusted")
+# Again, very slow to run -save results for use later
+#save(modelaovpairwise3, file = "../../data/mvabundaov3.rda") # Last run and save 4/4/22
+load(file = "../../data/mvabundaov3.rda")
+# Results
+modelaovpairwise3
+
+
+# And without the pairwise comparison
+#modelaovpairwise3a <- anova.manyglm(mvmodint, resamp="montecarlo", nBoot=49, p.uni="adjusted") # Small # of perms to speed up
+
+
+# Explore results from these anovas
+
+#Summary table (multi and uni variate)
+modelaovpairwise
+
+modelaovpairwise$table # Can report as: "Significant effect of reef type on predator fish communities (LRT=507, P=0.02)
+# Pairwise comparisons
+modelaovpairwise$pairwise.comp.table
+
 
 #Summary
-modsum <- modelaovpairwise$table 
-modsum # Can report as: "Significant effect of reef type on predator fish communities (LRT=507, P=0.02)
+modelaovpairwise2$table 
+modsum2 # Can report as: "Significant effect of reef type on predator fish communities (LRT=507, P=0.01)
+modelaovpairwise$pairwise.comp.table # No different from model with interaction term
+
+
+
 
 # Pairwise 
 modpairs <- modelaovpairwise$pairwise.comp.table %>% 
   as.data.frame()
+modpairs
 # LRT pairwise comparisons - report results in table
 
 # 2. Details - univariate
@@ -135,6 +193,20 @@ unitests
 # Save output
 write_xlsx(unitests, "../../output/rtables/taxa_LRT_mvabund.xlsx")
 save(unitests, file = "../../data/mvabund_unitests.RData")
+
+
+
+
+#### 
+
+
+
+
+
+
+
+
+
 
 
 

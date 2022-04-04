@@ -52,7 +52,7 @@ predperm$aov.tab
 # Try adding a fraction
 
 # 2a. Permanova with fraction added
-predmatrix <- predmatrix + 0.01
+predmatrix <- predmatrix + 0.0001
 predperm <- adonis(predmatrix ~ Reeftype, data = predenv)
 predperm
 predperm$coefficients
