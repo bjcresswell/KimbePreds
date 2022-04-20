@@ -109,7 +109,7 @@ pred.count
 # Check we have 120 Transects represented (12*2*5)
 pred.count %>% 
   group_by(TID) %>% 
-  summarise()
+  dplyr::summarise()
 
 # Check we have 13 families
 pred.count %>% 
@@ -119,7 +119,7 @@ pred.count %>%
 # Check total taxa observed (should be 63)
 pred.count %>% 
   group_by(Taxa) %>% 
-  summarise() 
+  dplyr::summarise() 
 
 # Now to figure out total abundance of each taxa across the whole of Kimbe Bay (need this for sorting data out later on)
 TAXcount <- pred.count %>% 
@@ -162,9 +162,6 @@ RTsig
 # And reorder based on abundance
 RTsig$Taxa <- reorder(RTsig$Taxa, -RTsig$sum)
 
-load("../../data/barracuda.png")
-
-
 
 # Plot
 
@@ -174,11 +171,12 @@ theme_set(theme_cowplot())
 
 sigtaxaplot <- 
 ggplot(data=RTsig, aes(x=Reeftype, y=mean, fill=Reeftype))+
+  geom_linerange(aes(ymin=mean-se, ymax=mean+se), width=.2)+ # The width argument is if you want to use geom_errorbar
   geom_point(aes(shape = Reeftype),stat="identity", colour="black", size = 5)+
   scale_shape_manual(values=c(24, 21, 22))+                       # had to adapt Kimbe pch scheme
   scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D"))+
-  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.2)+
   theme_classic()+
+  theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent")) +
   facet_wrap(~factor(Taxa), scales = 'free', ncol = 3) +
   ylab('Mean predator fish species abundance (±SE)')+
   xlab('')+
@@ -198,7 +196,7 @@ sigtaxaplot
 
 # Save
 # Coral reefs dims: Width max: 174mm Height max; 234mm
-ggsave(sigtaxaplot, filename= '../../output/rfigures/sigtaxaplot.png', width = 174, height = 109, units = "mm", dpi = 1000 )
+ggsave(sigtaxaplot, filename= '../../output/rfigures/sigtaxaplot_box.png', width = 174, height = 100, units = "mm", dpi = 1000 )
 
 
 
@@ -209,7 +207,7 @@ library(cowplot)
 library(magick)
 
 ggdraw() +
-  draw_image("../../data/barracuda", x = 0.28, y = 0.4, scale = .15) +
+  draw_image("../../data/barracuda", x = 1, y = 1, scale = 1) +
   draw_plot(sigtaxaplot)
 
 

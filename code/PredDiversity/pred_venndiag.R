@@ -115,12 +115,18 @@ predvenn <- ggvenn(spp_list, show_percentage = FALSE,
        set_name_color = "black",
        text_color = "black",
        set_name_size = 3,
-       text_size = 3)
+       text_size = 3) + 
+  theme(panel.border = element_rect(size = 1, fill = "transparent")) +
+  annotate("text", x = -1.8, y = 2, label = "a")
+  
 
-predvenn
 
-#ggsave(predvenn, filename= '../../output/rfigures/predvenn.pdf', width=4,  height=4, dpi = 1000 )
+ggsave(predvenn, filename= '../../output/rfigures/predvenn2.svg', width=4,  height=4, dpi = 1000 ) # SVG is for Inkscape editing :(
+ggsave(predvenn, filename= '../../output/rfigures/predvenn2.png', width=4,  height=4, dpi = 1000 )
 
+library(OpenImageR)
+
+img<-OpenImageR::readImage('../../output/rfigures/predvenn2.png')
        
 
 

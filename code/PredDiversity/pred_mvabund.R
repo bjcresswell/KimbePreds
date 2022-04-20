@@ -73,8 +73,8 @@ mvmodnb <- manyglm(predabund ~ predenv$Reeftype, test="LR", family="negative_bin
 
 # 4. Model validation 
 # In mvabund the only way to check this is plotting residuals vs fitted values
-plot(mvmodpois) # Looks like there may be a curved pattern
-plot(mvmodnb) # Negbinom good residuals
+plot.manyglm(mvmodpois, which = 1:4) # Looks like there may be a curved pattern
+plot(mvmodnb, which = 1:4) # Negbinom good residuals
 
 # Check AIC scores
 AIC(mvmodpois, mvmodnb)
@@ -90,7 +90,7 @@ AIC(mvmodpois, mvmodnb)
 
 # Option B: include site as an interaction term in model formula
 
-mvmodint <- manyglm(predabund ~ predenv$Reeftype*predenv$Site, test="LR", family="negative_binomial")
+mvmodint <- manyglm(predabund ~ predenv$Reeftype + predenv$Site, test="LR", family="negative_binomial")
 AIC(mvmodint, mvmodnb) 
 
 # Model with interaction scores worse (but prob could have predicted this as it's a less parsimonious model)
@@ -120,6 +120,7 @@ load(file = "../../data/mvabundaov.rda")
 # Results
 modelaovpairwise
 
+# Deviance is main output from this - how much "variation" unexplained (compared to Null model)
 
 # What about using montecarlo resampling in the anova method?
 #modelaovpairwise2 <- anova.manyglm(mvmodnb, resamp="montecarlo", pairwise.comp = predenv$Reeftype, p.uni="adjusted")
@@ -148,7 +149,12 @@ modelaovpairwise3
 #Summary table (multi and uni variate)
 modelaovpairwise
 
-modelaovpairwise$table # Can report as: "Significant effect of reef type on predator fish communities (LRT=507, P=0.02)
+modelaovpairwise$table # Can report as: "Significant effect of reef type on predator fish communities (LRT=507 (* this metric is "deviance"), Permutation P = 0.02)
+
+
+
+#LRT = Deviance of model / Devaiance Null model (or other)
+  
 # Pairwise comparisons
 modelaovpairwise$pairwise.comp.table
 

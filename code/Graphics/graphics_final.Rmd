@@ -39,20 +39,27 @@ library(tidyverse)
 ```{r lists-themes, include=FALSE}
 resultstheme <-
   theme_classic()+
-  theme(axis.title.x = element_text(family="Arial", size=10, colour = 'black', vjust = -0.5),
-        axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0),
-        axis.text.x = element_text(family="Arial", size= 10, colour = 'black', angle=0, vjust = 0),
-        axis.text.y = element_text(family="Arial", size= 10, colour = 'black'))+
+  theme(legend.position = "none")+
+  theme(axis.title.x = element_text(family="Arial", size=10, colour = 'black', vjust = -0.5))+
+  theme(axis.text.x = element_text(family="Arial", size= 10, colour = 'black', angle=0, vjust = 0))+
+        #axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0),
+        #axis.text.y = element_text(family="Arial", size= 10, colour = 'black'))+
   theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent")) 
 
 
 
-nulltheme <- 
-  theme_classic()+
-  theme(axis.text.x = element_blank())
+#nulltheme <- 
+ # theme_classic()+
+  #theme(axis.text.x = element_blank())
 
-emmeanslist <- list(
-  geom_pointrange(aes(ymin=lower.CL,  ymax=upper.CL)))
+#emmeanslist <- list(
+ # geom_pointrange(aes(ymin=lower.CL,  ymax=upper.CL)))
+  #geom_point(aes(shape = Reeftype),stat="identity", colour="black", size = 4)+
+  #scale_shape_manual(values=c(24, 21, 22))+                       # had to adapt Kimbe pch scheme
+  #scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D"))
+
+
+
 
 contrastslist <- list(
   geom_pointrange(aes(ymin=lower.CL,  ymax=upper.CL)),
@@ -91,27 +98,58 @@ abunplotdata <- abunplotdata %>%
 abunplotdata
 
 # Create emmeans figure
-abunplotresults <- ggplot(abunplotdata$emmeans, aes(y=response,  x=Reeftype)) +
-  ylab('\nAbundance\n(n)\n')+
+abunplotresults <- 
+  ggplot(abunplotdata$emmeans, aes(y=response,  x=Reeftype, fill=Reeftype)) +
+  ylab('Abundance (n)\n')+
   xlab(NULL)+
-  resultstheme+
+  geom_linerange(aes(ymin=lower.CL, ymax=upper.CL), width=.2)+
+  geom_point(aes(shape = Reeftype, fill= Reeftype), colour="black", size = 4)+
+  scale_shape_manual(values=c(24, 21, 22))+                       # had to adapt Kimbe pch scheme
+  scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D"))+
+  theme_classic()+
+  theme(legend.position = "none")+
   theme(axis.text.x = element_blank())+
-  emmeanslist+
-  annotate("text", x = 0.7, y = 25, label = "a")
+  #theme(axis.title.x = element_text(family="Arial", size=10, colour = 'black', vjust = -0.5))+
+  #theme(axis.text.x = element_text(family="Arial", size= 10, colour = 'black', angle=0, vjust = 0))+
+  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0))+
+  theme(axis.text.y = element_text(family="Arial", size= 10, colour = 'black'))+
+  theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent")) +
+  annotate("text", x = 0.6, y = 23, label = "a")
+
+abunplotresults
 
 # Create contrasts figure
-abunplotcontrasts <- ggplot(abunplotdata$contrasts, aes(y=estimate,  x=contrast)) +
-  resultstheme+
+abunplotcontrasts <- 
+  ggplot(abunplotdata$contrasts, aes(y=estimate,  x=contrast)) +
+  geom_linerange(aes(ymin=lower.CL,  ymax=upper.CL)) +
+  geom_point(colour="black", size = 4)+
+  geom_hline(yintercept = 0, linetype='dashed') +
+  scale_y_continuous(position = "right")+
+  ylab('') +
+  xlab(NULL)+
+  theme_classic()+
   theme(axis.text.x = element_blank())+
-  contrastslist+
-  xlab(NULL)
+  #theme(axis.title.x = element_text(family="Arial", size=10, colour = 'black', vjust = -0.5))+
+  #theme(axis.text.x = element_text(family="Arial", size= 10, colour = 'black', angle=0, vjust = 0))+
+  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0))+
+  theme(axis.text.y = element_text(family="Arial", size= 10, colour = 'black'))+
+  theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent")) +
+  annotate("text", x = 3.4, y = 20, label = "d")
+
+abunplotcontrasts
 
 # Plot together
 # Patchwork
 abunfig <- abunplotresults + abunplotcontrasts
+
+
+
 abunfig
+
+
+
 # Save
-#ggsave(abunfig, filename= '../../output/rfigures/abun_fig.png', width=7,  height=2, dpi = 500 )
+ggsave(abunfig, filename= '../../output/rfigures/abun_fig_col.png', width=7,  height=2, dpi = 600 )
 ```
 
 
@@ -144,28 +182,50 @@ biomplotdata <- biomplotdata %>%
 biomplotdata
 
 # Create emmeans figure
-biomplotresults <- ggplot(biomplotdata$emmeans, aes(y=response,  x=Reeftype)) +
-  ylab('\nBiomass\n(kg)\n')+
+biomplotresults <- 
+  ggplot(biomplotdata$emmeans, aes(y=response,  x=Reeftype)) +
+  ylab('Biomass (kg)\n')+
   xlab(NULL)+
-  resultstheme+
+  geom_linerange(aes(ymin=lower.CL, ymax=upper.CL), width=.2)+
+  geom_point(aes(shape = Reeftype, fill= Reeftype), colour="black", size = 4)+
+  scale_shape_manual(values=c(24, 21, 22))+                       # had to adapt Kimbe pch scheme
+  scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D"))+
+  theme_classic()+
+  theme(legend.position = "none")+
   theme(axis.text.x = element_blank())+
-  emmeanslist+
-  annotate("text", x = 0.7, y = 32, label = "b")
+  #theme(axis.title.x = element_text(family="Arial", size=10, colour = 'black', vjust = -0.5))+
+  #theme(axis.text.x = element_text(family="Arial", size= 10, colour = 'black', angle=0, vjust = 0))+
+  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0))+
+  theme(axis.text.y = element_text(family="Arial", size= 10, colour = 'black'))+
+  theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent")) +
+  annotate("text", x = 0.6, y = 34, label = "b")
 
 
 # Create contrasts figure
-biomplotcontrasts <- ggplot(biomplotdata$contrasts, aes(y=estimate,  x=contrast)) +
-  resultstheme+
+biomplotcontrasts <- 
+  ggplot(biomplotdata$contrasts, aes(y=estimate,  x=contrast)) +
+  geom_linerange(aes(ymin=lower.CL,  ymax=upper.CL)) +
+  geom_point(colour="black", size = 4)+
+  geom_hline(yintercept = 0, linetype='dashed') +
+  scale_y_continuous(position = "right")+
+  ylab('') +
+  xlab(NULL)+
+  theme_classic()+
   theme(axis.text.x = element_blank())+
-  contrastslist+
-  xlab(NULL)
+  #theme(axis.title.x = element_text(family="Arial", size=10, colour = 'black', vjust = -0.5))+
+  #theme(axis.text.x = element_text(family="Arial", size= 10, colour = 'black', angle=0, vjust = 0))+
+  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0))+
+  theme(axis.text.y = element_text(family="Arial", size= 10, colour = 'black'))+
+  theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent")) +
+  annotate("text", x = 3.4, y = 30, label = "e")
 
 
 # Plot together
-biomfig <- biomplotresults + biomplotcontrasts
+biomfig <- 
+  biomplotresults + biomplotcontrasts
 biomfig
 # Save
-#ggsave(biomfig, filename= '../../output/rfigures/biomass_fig.png', width=7,  height=2, dpi = 500 )
+ggsave(biomfig, filename= '../../output/rfigures/biomass_fig.png', width=7,  height=2, dpi = 600 )
 
 
 ```
@@ -205,19 +265,42 @@ shanplotdata <- shanplotdata %>%
 shanplotdata
 
 # Create emmeans figure
-shanplotresults <- ggplot(shanplotdata$emmeans, aes(y=rate,  x=Reeftype)) +
-  ylab('Diversity\n(H)\n')+
+shanplotresults <- 
+  ggplot(shanplotdata$emmeans, aes(y=response,  x=Reeftype)) +
+  ylab('Diversity (H)\n')+
   xlab('Reef type')+
-  resultstheme+
-  emmeanslist+
-  annotate("text", x = 0.7, y = 1.5, label = "c")
+  geom_linerange(aes(ymin=lower.CL, ymax=upper.CL), width=.2)+
+  geom_point(aes(shape = Reeftype, fill= Reeftype), colour="black", size = 4)+
+  scale_shape_manual(values=c(24, 21, 22))+                       # had to adapt Kimbe pch scheme
+  scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D"))+
+  theme_classic()+
+  theme(legend.position = "none")+
+  #theme(axis.text.x = element_blank())+
+  theme(axis.title.x = element_text(family="Arial", size=10, colour = 'black', vjust = -0.5))+
+  theme(axis.text.x = element_text(family="Arial", size= 10, colour = 'black', angle=0, vjust = 0))+
+  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0))+
+  theme(axis.text.y = element_text(family="Arial", size= 10, colour = 'black'))+
+  theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent")) +
+  annotate("text", x = 0.6, y = 1.4, label = "c")
 
 
 # Create contrasts figure
-shanplotcontrasts <- ggplot(shanplotdata$contrasts, aes(y=estimate,  x=contrast)) +
+shanplotcontrasts <- 
+  ggplot(shanplotdata$contrasts, aes(y=estimate,  x=contrast)) +
+  geom_linerange(aes(ymin=lower.CL,  ymax=upper.CL)) +
+  geom_point(colour="black", size = 4)+
+  geom_hline(yintercept = 0, linetype='dashed') +
+  scale_y_continuous(position = "right")+
+  ylab('') +
   xlab('Contrasts')+
-  resultstheme+
-  contrastslist
+  theme_classic()+
+  theme(axis.text.x = element_blank())+
+  theme(axis.title.x = element_text(family="Arial", size=10, colour = 'black', vjust = -0.5))+
+  theme(axis.text.x = element_text(family="Arial", size= 10, colour = 'black', angle=0, vjust = 0))+
+  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0))+
+  theme(axis.text.y = element_text(family="Arial", size= 10, colour = 'black'))+
+  theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent")) +
+  annotate("text", x = 3.4, y = 1.25, label = "f")
 
 # Plot together in patchwork
 shanfig <- shanplotresults + shanplotcontrasts
@@ -228,14 +311,15 @@ shanfig
 
 
 
-# Combined abundance and biomass figure
-```{r graph-abunbiom}
+# Combined  figure
+```{r graph-combined, fig.height = 5, fig.width = 8}
 # Using patchwork not gridarrange (lines up axes better)
 mainfig <- abunfig / biomfig / shanfig
 mainfig
 
-ggsave(mainfig, filename= '../../output/rfigures/main_fig.tiff',  width = 174, height = 174, units = "mm", dpi = 600)
+ggsave(mainfig, filename= '../../output/rfigures/main_fig_goldrat.tiff',  width = 174, height = 107, units = "mm", dpi = 1200)
 
+citation('ggvenn')
 ```
 
 
