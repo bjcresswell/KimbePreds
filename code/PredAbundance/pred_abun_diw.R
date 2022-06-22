@@ -3,7 +3,7 @@
 # Last edit 31 Aug 2021 BJC
 
 
-rm(list=ls())
+#rm(list=ls())
 # Load data
 setwd("~/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds")
 library(readxl)

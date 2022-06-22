@@ -20,7 +20,7 @@ editor_options:
 
 ```{r setup, include=TRUE, warnings=FALSE, message=FALSE}
 knitr::opts_chunk$set(root.dir = "~/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/", echo = TRUE)
-rm(list=ls())
+#rm(list=ls())
 getwd()
 ```
 
@@ -149,7 +149,7 @@ abunfig
 
 
 # Save
-ggsave(abunfig, filename= '../../output/rfigures/abun_fig_col.png', width=7,  height=2, dpi = 600 )
+#ggsave(abunfig, filename= '../../output/rfigures/abun_fig_col.png', width=7,  height=2, dpi = 600 )
 ```
 
 
@@ -225,8 +225,7 @@ biomfig <-
   biomplotresults + biomplotcontrasts
 biomfig
 # Save
-ggsave(biomfig, filename= '../../output/rfigures/biomass_fig.png', width=7,  height=2, dpi = 600 )
-
+#ggsave(biomfig, filename= '../../output/rfigures/biomass_fig.png', width=7,  height=2, dpi = 600 )
 
 ```
 
@@ -317,7 +316,7 @@ shanfig
 mainfig <- abunfig / biomfig / shanfig
 mainfig
 
-ggsave(mainfig, filename= '../../output/rfigures/main_fig_goldrat.tiff',  width = 174, height = 107, units = "mm", dpi = 1200)
+#ggsave(mainfig, filename= '../../output/rfigures/main_fig_goldrat.tiff',  width = 174, height = 107, units = "mm", dpi = 1200)
 
 citation('ggvenn')
 ```

@@ -7,13 +7,13 @@
 # 3. predsum - a summary file with counts of predators by transect
 
 # Housekeeping + prelims
-rm(list=ls())
+#rm(list=ls())
 #dev.off()
 library(readxl)
 library(arsenal) # For comparing dataframes
 library(tidyverse)
 getwd()
-setwd("~/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds")
+#setwd("../")
 
 # Load data - can skip to load.data if already done this stage (~ Line 47)
 # Load both survey periods in: 
@@ -63,14 +63,14 @@ fish <- fish %>%
 # So can merge Mermaid data with this df and then start filtering
 
 # Load Mermaid parameter detail csv:
-mermaid <- read_csv('data/fish-species.csv') # Contains all species on mermaid database
+mermaid <- read_csv('../data/fish-species.csv') # Contains all species on mermaid database
 # Some initial wrangling on the mermaid df
 mermaid <- mermaid %>% 
   mutate_if(is.character, as.factor) %>% # Char -> fact variables
   mutate(Taxa = factor(paste(Genus, Species))) # New column ("Taxa") to allow merge with fish df
 
 # Can also check against Sandin List
-sandin <-  read_xlsx('data/Sandin Fish List.xlsx', 1)
+sandin <-  read_xlsx('../data/Sandin Fish List.xlsx', 1)
 # And some additional wrangling
 sandin <- sandin %>% 
   mutate_if(is.character, as.factor)
@@ -142,7 +142,7 @@ merfish<-merfish %>%
          "Species" = "Species.x") %>% 
     dplyr::select(!(c(`Family.y`, `Genus.y`, `Species.y`))) # and get rid of duplicates
 
-save(merfish, file='data/merfish.RData') # Save as RData file
+save(merfish, file='../data/merfish.RData') # Save as RData file
 
 # Next, check all the families present:
 summary(merfish$Family)
@@ -261,8 +261,8 @@ preds %>%
   summarise()
 
 #if (!dir.exists('data')) dir.create('data') # Create folder for data if one not present
-save(preds, file='data/preds.RData') # Save as RData file
-rm(list=ls())
+save(preds, file='../data/preds.RData') # Save as RData file
+#rm(list=ls())
 #load(file='data/preds.RData') # Save as RData file
 
 

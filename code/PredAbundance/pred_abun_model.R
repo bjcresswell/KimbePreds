@@ -3,7 +3,7 @@
 # Script to model differences in abundance
 # Last edit 26 July 2021  BJC
 
-rm(list=ls())
+#rm(list=ls())
 #graphics.off()
 
 library(gt)
@@ -23,7 +23,8 @@ library(modelr)    #for auxillary modelling functions
 library(tidyverse) #for data wrangling
 
 # Load data
-setwd("/Users/bjcresswell/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/code/PredAbundance")
+getwd()
+setwd("code/PredAbundance")
 load('../../data/predsum.RData')
 head(predsum)
 glimpse(predsum)

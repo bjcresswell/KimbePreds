@@ -144,12 +144,6 @@ t.resid <- simulateResiduals(pred.glmmt, plot=T) #
 ```
 -> All look ok apart from overdispersion
 
-# Binned residuals:
-```{r abun-binresid}
-binned_residuals(pred.glmmnb) # 100% inside error bounds
-binned_residuals(pred.glmmzi) # 100% inside error bounds
-binned_residuals(pred.glmmt) # 100% inside error bounds
-```
 
 # Validation with AIC
 ```{r abun-aic1}
@@ -268,10 +262,36 @@ abunratios
 # Create plot data
 Final step is to create the df to be used for plot making 
 ```{r abun-plot-data}
-abunplotdata <- emmeans(pred.glmmnboff, pairwise ~ Reeftype, transform='response') %>%
+# First calculate the emmeans estimates
+abunplotmeans <- emmeans(pred.glmmnboff, pairwise ~ Reeftype, transform='response') %>% 
   confint() %>% 
-  as_tibble() 
+  as_tibble() %>% 
+  #dplyr::select(-contrasts) %>% 
+  transmute(Reeftype = emmeans$Reeftype,
+            Mean = emmeans$response,
+            `95CI` = emmeans$response-emmeans$lower.CL)
 
+# Then the 66% confidence intervals
+CI66 <- emmeans(pred.glmmnboff, pairwise ~ Reeftype, transform='response') %>%
+  confint(level = 0.66) %>% 
+  as_tibble() %>% 
+  transmute(contrastlowerCI66 = contrasts$lower.CL,
+            contrastupperCI66 = contrasts$upper.CL)
+
+# And bind to the 95% CI contrasts 
+abunplotcontrasts <- emmeans(pred.glmmnboff, pairwise ~ Reeftype, transform='response') %>%
+  confint() %>% 
+  as_tibble() %>% 
+  transmute(
+    Contrast = contrasts$contrast, 
+    Estimate = contrasts$estimate, 
+    contrastlowerCI95 = contrasts$lower.CL,
+    contrastupperCI95 = contrasts$upper.CL
+         ) %>% 
+  bind_cols(CI66)
+
+abunplotdata <- abunplotmeans %>% 
+  bind_cols(abunplotcontrasts) 
 
 save(abunplotdata, file='../../data/abunplotdata.RData')
 ```
