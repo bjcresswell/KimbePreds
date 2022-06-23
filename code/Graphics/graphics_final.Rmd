@@ -28,8 +28,11 @@ getwd()
 # Load relevant packates
 ```{r packages}
 library(readxl)
+library(grid)
 library(gridExtra)
+library(ggpubr)
 library(sjPlot)
+library(cowplot)
 library(patchwork)
 library(tidyverse)
 ```
@@ -70,39 +73,31 @@ contrastslist <- list(
 
 
 # Abundance
-```{r abun-plot}
+```{r abun-plot-data}
 # Load data
 load("../../data/abunplotdata.RData")
 
-# Tweak contrast labels so they will fit on subsequent figure
-abunplotdata$contrasts$contrast <- dplyr::recode(abunplotdata$contrasts$contrast,
-       `Pinnacle - Offshore` = 'P-O',
-       `Pinnacle - Nearshore` = 'P-N',
-       `Offshore - Nearshore` = 'O-N')
+# Tweak labels so figure looks nice
+abunplotdata <- 
+abunplotdata %>% 
+  mutate(Contrast = recode_factor(Contrast,
+                                         `Pinnacle - Offshore` = 'P-O',
+                                         `Pinnacle - Nearshore` = 'P-N',
+                                         `Offshore - Nearshore` = 'O-N'),
+         Reeftype = dplyr::recode(Reeftype,
+                                         `Pinnacle` = 'P',
+                                         `Offshore` = 'O',
+                                         `Nearshore` = 'N'))
+```
 
-# Relevel contrasts so they show up in a logical order
-abunplotdata$contrasts <- abunplotdata$contrasts %>% 
-  mutate(contrast = factor(contrast, levels= c("P-O", "P-N", "O-N")))
 
-# Rename (recode) the Reeftypes in emmeans so that you get "level" figures
-abunplotdata$emmeans$Reeftype <- dplyr::recode(abunplotdata$emmeans$Reeftype,
-                                          `Pinnacle` = 'P',
-                                          `Offshore` = 'O',
-                                          `Nearshore` = 'N')
-
-# And convert back to emm object
-abunplotdata <- abunplotdata %>% 
-  as.list
-
-# Check
-abunplotdata
-
+```{r abun-plot-make}
 # Create emmeans figure
 abunplotresults <- 
-  ggplot(abunplotdata$emmeans, aes(y=response,  x=Reeftype, fill=Reeftype)) +
+  ggplot(abunplotdata, aes(y=Mean,  x=Reeftype)) +
   ylab('Abundance (n)\n')+
   xlab(NULL)+
-  geom_linerange(aes(ymin=lower.CL, ymax=upper.CL), width=.2)+
+  geom_linerange(aes(ymin = Mean - CI95 , ymax = Mean + CI95),  size = 0.3)+
   geom_point(aes(shape = Reeftype, fill= Reeftype), colour="black", size = 4)+
   scale_shape_manual(values=c(24, 21, 22))+                       # had to adapt Kimbe pch scheme
   scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D"))+
@@ -120,15 +115,17 @@ abunplotresults
 
 # Create contrasts figure
 abunplotcontrasts <- 
-  ggplot(abunplotdata$contrasts, aes(y=estimate,  x=contrast)) +
-  geom_linerange(aes(ymin=lower.CL,  ymax=upper.CL)) +
+  ggplot(abunplotdata, aes(y=Estimate,  x=Contrast)) +
+  geom_linerange(aes(ymin = contrastlowerCI95,  ymax = contrastupperCI95), size = 0.3) +
+  geom_linerange(aes(ymin = contrastlowerCI66,  ymax = contrastupperCI66), size = 0.6) +
   geom_point(colour="black", size = 4)+
   geom_hline(yintercept = 0, linetype='dashed') +
   scale_y_continuous(position = "right")+
   ylab('') +
-  xlab(NULL)+
+  #xlab(NULL)+
   theme_classic()+
   theme(axis.text.x = element_blank())+
+  theme(axis.title.x = element_blank())+
   #theme(axis.title.x = element_text(family="Arial", size=10, colour = 'black', vjust = -0.5))+
   #theme(axis.text.x = element_text(family="Arial", size= 10, colour = 'black', angle=0, vjust = 0))+
   theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0))+
@@ -137,56 +134,48 @@ abunplotcontrasts <-
   annotate("text", x = 3.4, y = 20, label = "d")
 
 abunplotcontrasts
+```
 
 # Plot together
+```{r abun-plot-patch}
 # Patchwork
-abunfig <- abunplotresults + abunplotcontrasts
+(abunfig <- abunplotresults + abunplotcontrasts)
+```
 
 
-
-abunfig
-
-
-
+```{r abun-plot-save}
 # Save
-#ggsave(abunfig, filename= '../../output/rfigures/abun_fig_col.png', width=7,  height=2, dpi = 600 )
+ggsave(abunfig, filename= '../../output/rfigures/abun_fig_col.png', width=7,  height=2, dpi = 600 )
 ```
 
 
 # Biomass
 
-```{r abun-plot}
+```{r biom-plot-data}
 # Load data
 load(file='../../data/biomplotdata.RData')
 
-# Tweak contrast labels so they will fit on subsequent figure
-biomplotdata$contrasts$contrast <- dplyr::recode(biomplotdata$contrasts$contrast,
-       `Pinnacle - Offshore` = 'P-O',
-       `Pinnacle - Nearshore` = 'P-N',
-       `Offshore - Nearshore` = 'O-N')
+# Tweak labels so figure looks nice
+biomplotdata <- 
+biomplotdata %>% 
+  mutate(Contrast = recode_factor(Contrast,
+                                         `Pinnacle - Offshore` = 'P-O',
+                                         `Pinnacle - Nearshore` = 'P-N',
+                                         `Offshore - Nearshore` = 'O-N'),
+         Reeftype = dplyr::recode(Reeftype,
+                                         `Pinnacle` = 'P',
+                                         `Offshore` = 'O',
+                                         `Nearshore` = 'N'))
+```
 
-# Relevel contrasts so they show up in a logical order
-biomplotdata$contrasts <- biomplotdata$contrasts %>% 
-  mutate(contrast = factor(contrast, levels= c("P-O", "P-N", "O-N")))
 
-# Rename (recode) the Reeftypes in emmeans so that you get "level" figures
-biomplotdata$emmeans$Reeftype <- dplyr::recode(biomplotdata$emmeans$Reeftype,
-                                          `Pinnacle` = 'P',
-                                          `Offshore` = 'O',
-                                          `Nearshore` = 'N')
-# And convert back to emm object
-biomplotdata <- biomplotdata %>% 
-  as.list
-
-# Check
-biomplotdata
-
+```{r biom-plot-make}
 # Create emmeans figure
 biomplotresults <- 
-  ggplot(biomplotdata$emmeans, aes(y=response,  x=Reeftype)) +
+  ggplot(biomplotdata, aes(y=Mean,  x=Reeftype)) +
   ylab('Biomass (kg)\n')+
   xlab(NULL)+
-  geom_linerange(aes(ymin=lower.CL, ymax=upper.CL), width=.2)+
+  geom_linerange(aes(ymin = Mean - CI95 , ymax = Mean + CI95),  size = 0.3)+
   geom_point(aes(shape = Reeftype, fill= Reeftype), colour="black", size = 4)+
   scale_shape_manual(values=c(24, 21, 22))+                       # had to adapt Kimbe pch scheme
   scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D"))+
@@ -203,8 +192,9 @@ biomplotresults <-
 
 # Create contrasts figure
 biomplotcontrasts <- 
-  ggplot(biomplotdata$contrasts, aes(y=estimate,  x=contrast)) +
-  geom_linerange(aes(ymin=lower.CL,  ymax=upper.CL)) +
+  ggplot(biomplotdata, aes(y=Estimate,  x=Contrast)) +
+  geom_linerange(aes(ymin = contrastlowerCI95,  ymax = contrastupperCI95), size = 0.3) +
+  geom_linerange(aes(ymin = contrastlowerCI66,  ymax = contrastupperCI66), size = 0.6) +
   geom_point(colour="black", size = 4)+
   geom_hline(yintercept = 0, linetype='dashed') +
   scale_y_continuous(position = "right")+
@@ -218,15 +208,18 @@ biomplotcontrasts <-
   theme(axis.text.y = element_text(family="Arial", size= 10, colour = 'black'))+
   theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent")) +
   annotate("text", x = 3.4, y = 30, label = "e")
+```
 
 
+```{r biom-plot-patch}
 # Plot together
-biomfig <- 
-  biomplotresults + biomplotcontrasts
-biomfig
-# Save
-#ggsave(biomfig, filename= '../../output/rfigures/biomass_fig.png', width=7,  height=2, dpi = 600 )
+(biomfig <- biomplotresults + biomplotcontrasts)
+```
 
+
+```{r biom-plot-save}
+# Save
+ggsave(biomfig, filename= '../../output/rfigures/biomass_fig.png', width=7,  height=2, dpi = 600 )
 ```
 
 # Note
@@ -236,39 +229,31 @@ Not included in final figures
 
 
 # Shannon Weiner diversity
-```{r shannon-plot}
+```{r shannon-plot-data}
 # Load data
 load("../../data/shanplotdata.RData")
 
-# Tweak contrast labels so they will fit on subsequent figure
-shanplotdata$contrasts$contrast <- dplyr::recode(shanplotdata$contrasts$contrast,
-                                          `Pinnacle - Offshore` = 'P-O',
-                                          `Pinnacle - Nearshore` = 'P-N',
-                                          `Offshore - Nearshore` = 'O-N')
+# Tweak labels so figure looks nice
+shanplotdata <- 
+shanplotdata %>% 
+  mutate(Contrast = recode_factor(Contrast,
+                                         `Pinnacle - Offshore` = 'P-O',
+                                         `Pinnacle - Nearshore` = 'P-N',
+                                         `Offshore - Nearshore` = 'O-N'),
+         Reeftype = dplyr::recode(Reeftype,
+                                         `Pinnacle` = 'P',
+                                         `Offshore` = 'O',
+                                         `Nearshore` = 'N'))
+```
 
 
-# Relevel contrasts so they show up in a logical order
-shanplotdata$contrasts <- shanplotdata$contrasts %>% 
-  mutate(contrast = factor(contrast, levels= c("P-O", "P-N", "O-N")))
-
-# Rename (recode) the Reeftypes in emmeans so that you get "level" figures
-shanplotdata$emmeans$Reeftype <- dplyr::recode(shanplotdata$emmeans$Reeftype,
-                                        `Pinnacle` = 'P',
-                                        `Offshore` = 'O',
-                                          `Nearshore` = 'N')
-# And convert back to emm object
-shanplotdata <- shanplotdata %>% 
-  as.list
-
-# Check
-shanplotdata
-
+```{r shannon-plot-make}
 # Create emmeans figure
 shanplotresults <- 
-  ggplot(shanplotdata$emmeans, aes(y=response,  x=Reeftype)) +
+  ggplot(shanplotdata, aes(y=Mean,  x=Reeftype)) +
   ylab('Diversity (H)\n')+
   xlab('Reef type')+
-  geom_linerange(aes(ymin=lower.CL, ymax=upper.CL), width=.2)+
+  geom_linerange(aes(ymin = Mean - CI95 , ymax = Mean + CI95),  size = 0.3)+
   geom_point(aes(shape = Reeftype, fill= Reeftype), colour="black", size = 4)+
   scale_shape_manual(values=c(24, 21, 22))+                       # had to adapt Kimbe pch scheme
   scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D"))+
@@ -285,8 +270,9 @@ shanplotresults <-
 
 # Create contrasts figure
 shanplotcontrasts <- 
-  ggplot(shanplotdata$contrasts, aes(y=estimate,  x=contrast)) +
-  geom_linerange(aes(ymin=lower.CL,  ymax=upper.CL)) +
+  ggplot(shanplotdata, aes(y=Estimate,  x=Contrast)) +
+  geom_linerange(aes(ymin = contrastlowerCI95,  ymax = contrastupperCI95), size = 0.3) +
+  geom_linerange(aes(ymin = contrastlowerCI66,  ymax = contrastupperCI66), size = 0.6) +
   geom_point(colour="black", size = 4)+
   geom_hline(yintercept = 0, linetype='dashed') +
   scale_y_continuous(position = "right")+
@@ -300,25 +286,56 @@ shanplotcontrasts <-
   theme(axis.text.y = element_text(family="Arial", size= 10, colour = 'black'))+
   theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent")) +
   annotate("text", x = 3.4, y = 1.25, label = "f")
+```
 
+
+```{r shannon-plot-patch}
 # Plot together in patchwork
-shanfig <- shanplotresults + shanplotcontrasts
-shanfig
+(shanfig <- shanplotresults + shanplotcontrasts)
+```
+
+
+```{r shannon-plot-save}
 # Save
 #ggsave(shanfig, filename= '../../output/rfigures/shan_fig.png', width=7,  height=2, dpi = 500 )
 ```
 
 
 
-# Combined  figure
+# Combined  figure - hacky hacky and more hacky
 ```{r graph-combined, fig.height = 5, fig.width = 8}
-# Using patchwork not gridarrange (lines up axes better)
-mainfig <- abunfig / biomfig / shanfig
-mainfig
+# Using ggarrange from ggpubr
+#mainfig <-   ggarrange(abunfig, biomfig, shanfig, nrow =3)
+# Doesn't align very well, as it squashes in axes where there are decimal points that make the numbers wider
 
-#ggsave(mainfig, filename= '../../output/rfigures/main_fig_goldrat.tiff',  width = 174, height = 107, units = "mm", dpi = 1200)
+# Using patchwork (lines up axes better)
+mainfig <-
+  abunfig / biomfig / shanfig
 
-citation('ggvenn')
+# But need a Y axis label that covers the whole contrast part of the figure (RHS) -> no real way to do this in patchwork (have tried all the hacks)
+# Have got 2 hacky workarounds: 
+# 1. Make a blank plot and add it to the RHS using ggarrange
+right.panel <-
+  abunplotdata %>%
+  filter(Reeftype == 'P') %>% 
+  ggplot() +
+  ylab("Contrast effect size estimate (±95/66% CI)")
+
+mainfig1 <- ggpubr::ggarrange(mainfig, right.panel, ncol = 2, widths = c(1, 0.05) )
+
+# 2. Using ggpubr::annotate_figure (requires passing the mainfig to ggarrange first anyways as it doesn't work with the plot 'as-is')
+mainfig2 <- ggpubr::ggarrange(mainfig)
+mainfig2 <- annotate_figure(mainfig2, right = text_grob("Contrast effect size estimate (±95/66% CI)", rot = 90))
+
+mainfig1
+mainfig2
+```
+
+
+```{r graph-combined, fig.height = 5, fig.width = 8}
+ggsave(mainfig1, filename= '../../output/rfigures/main_fig1.tiff',  width = 174, height = 107, units = "mm", dpi = 600)
+ggsave(mainfig2, filename= '../../output/rfigures/main_fig2.tiff',  width = 174, height = 107, units = "mm", dpi = 600)
+
 ```
 
 

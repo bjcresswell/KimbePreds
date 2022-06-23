@@ -225,7 +225,7 @@ biomratiopvals <- emmeans(biom.glmmtoff,  ~ Reeftype, type='response', combine=T
   as.data.frame() 
 
 # Combine
-biomratios <- bind_cols(biomratios, biomratiopvals[6:7]) 
+biomratios <- bind_cols(biomratios, biomratiopvals[5:6]) 
 
 # Write to csv
 write_csv(biomratios, file = "../../output/rtables/biomratios.csv")
@@ -242,9 +242,39 @@ Slightly different story with the ratios - don't know why!!  The story is pretty
 # Create plot data
 Final step is to create the df to be used for plot making 
 ```{r biom-plot-data}
-biomplotdata <- emmeans(biom.glmmtoff, pairwise ~ Reeftype, transform='response') %>%
+
+# First calculate the emmeans estimates
+biomplotmeans <- emmeans(biom.glmmtoff, pairwise ~ Reeftype, transform='response') %>% 
   confint() %>% 
-  as_tibble() 
+  as_tibble() %>% 
+  #dplyr::select(-contrasts) %>% 
+  transmute(Reeftype = emmeans$Reeftype,
+            Mean = emmeans$response,
+            CI95 = emmeans$response-emmeans$lower.CL)
+
+# Then the 66% confidence intervals
+biomCI66 <- emmeans(biom.glmmtoff, pairwise ~ Reeftype, transform='response') %>%
+  confint(level = 0.66) %>% 
+  as_tibble() %>% 
+  transmute(contrastlowerCI66 = contrasts$lower.CL,
+            contrastupperCI66 = contrasts$upper.CL)
+
+# And bind to the 95% CI contrasts 
+biomplotcontrasts <- emmeans(biom.glmmtoff, pairwise ~ Reeftype, transform='response') %>%
+  confint() %>% 
+  as_tibble() %>% 
+  transmute(
+    Contrast = contrasts$contrast, 
+    Estimate = contrasts$estimate, 
+    contrastlowerCI95 = contrasts$lower.CL,
+    contrastupperCI95 = contrasts$upper.CL
+         ) %>% 
+  bind_cols(biomCI66)
+
+biomplotdata <- biomplotmeans %>% 
+  bind_cols(abunplotcontrasts) 
+
+
 
 save(biomplotdata, file='../../data/biomplotdata.RData')
 ```

@@ -147,7 +147,7 @@ prglmmREp = glmmTMB(SpecNo ~ 1 + (1|Site), data = preddiv, family='poisson', REM
 ```{r rich-model-aic2}
 AIC(prglmmp, prglmmnb, prglmmREn, prglmmREp)
 ```
-Fixed effects a better fit than R.E. only and poisson best fit overall
+Poisson best fit overall
 
 # Model investigation {.tabset .tabset-faded}
 
@@ -499,26 +499,40 @@ pshan.glmmT %>%
 
 ## Plot data
 ```{r shan-plot-data}
-
-shanplotdata <- emmeans(pshan.glmmT, pairwise ~ Reeftype, transform='response') %>%
+# First calculate the emmeans estimates
+shanplotmeans <- emmeans(pshan.glmmT, pairwise ~ Reeftype, transform='response') %>% 
   confint() %>% 
-  as_tibble() 
+  as_tibble() %>% 
+  #dplyr::select(-contrasts) %>% 
+  transmute(Reeftype = emmeans$Reeftype,
+            Mean = emmeans$response,
+            CI95 = emmeans$response-emmeans$lower.CL)
+
+# Then the 66% confidence intervals
+shanCI66 <- emmeans(pshan.glmmT, pairwise ~ Reeftype, transform='response') %>%
+  confint(level = 0.66) %>% 
+  as_tibble() %>% 
+  transmute(contrastlowerCI66 = contrasts$lower.CL,
+            contrastupperCI66 = contrasts$upper.CL)
+
+# And bind to the 95% CI contrasts 
+shanplotcontrasts <- emmeans(pshan.glmmT, pairwise ~ Reeftype, transform='response') %>%
+  confint() %>% 
+  as_tibble() %>% 
+  transmute(
+    Contrast = contrasts$contrast, 
+    Estimate = contrasts$estimate, 
+    contrastlowerCI95 = contrasts$lower.CL,
+    contrastupperCI95 = contrasts$upper.CL
+         ) %>% 
+  bind_cols(shanCI66)
+
+shanplotdata <- shanplotmeans %>% 
+  bind_cols(shanplotcontrasts) 
 
 
-#save(shanplotdata, file='../../data/shanplotdata.RData')
+save(shanplotdata, file='../../data/shanplotdata.RData')
 
 ```
-
-
-
-
-# Community differences
-
-```{r -community-model}
-#getwd()
-#source("pred_mvabund.R", local = knitr::knit_global())
-```
-
-
 
 

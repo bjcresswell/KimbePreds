@@ -269,7 +269,7 @@ abunplotmeans <- emmeans(pred.glmmnboff, pairwise ~ Reeftype, transform='respons
   #dplyr::select(-contrasts) %>% 
   transmute(Reeftype = emmeans$Reeftype,
             Mean = emmeans$response,
-            `95CI` = emmeans$response-emmeans$lower.CL)
+            CI95 = emmeans$response-emmeans$lower.CL)
 
 # Then the 66% confidence intervals
 CI66 <- emmeans(pred.glmmnboff, pairwise ~ Reeftype, transform='response') %>%

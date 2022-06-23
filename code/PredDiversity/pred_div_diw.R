@@ -10,14 +10,15 @@
 # Housekeeping
 getwd()
 setwd("~/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/code/PredDiversity") # Have to specify this so that the script works embedded within the Rmd
-rm(list=ls())
+#rm(list=ls())
 
 
 library(MASS)
 library(ggdendro)
 library(vegan)
-library(ggvegan)
+library(ggvegan) 
 library(tidyverse)
+
 
 # Import raw predator and fish data 
 load('../../data/preds.RData')
