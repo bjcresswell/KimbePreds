@@ -1,0 +1,223 @@
+---
+title: "Kimbe Predator Graphics - Supplementary Information"
+author: "Ben Cresswell"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+ html_document:
+    code_folding: show
+    collapse: no
+    df_print: paged
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 4
+    highlight: textmate
+    theme: spacelab
+    toc: yes
+    toc_float: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+Last edit 23 July 2022 BJC
+
+```{r setup, include=TRUE, warnings=FALSE, message=FALSE}
+knitr::opts_chunk$set(root.dir = "~/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/", echo = TRUE)
+#rm(list=ls())
+getwd()
+```
+
+
+# Load relevant packages
+```{r packages}
+library(readxl)
+library(grid)
+library(gridExtra)
+library(magrittr)
+library(ggpubr)
+library(sjPlot)
+library(cowplot)
+library(patchwork)
+library(tidyverse)
+```
+
+
+
+### GRAPHICS FOR SI ###
+
+Need the abun, biom and diversity differences across individual sites/reefs (in addition to reef types)
+
+
+# ABUNDANCE #
+
+## Load abundance data
+```{r abun-load, include=FALSE}
+source("../PredAbundance/pred_abun_diw.R", local = knitr::knit_global())
+```
+
+## Calculate summary stats for sites
+```{r abun-sum-stats}
+abunreefstats <- 
+  predsum %>% 
+  group_by(Reeftype, SiteCode, Site) %>% 
+  summarise_each(funs(mean,sd,se=sd(.)/sqrt(n())), No_Preds)
+
+```
+
+## Plot
+```{r}
+bradabunbar <- 
+abunreefstats %>% 
+  filter(SiteCode == 'BRAD') %>% 
+ggplot(aes(x=SiteCode, y=mean)) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.2, position=position_dodge(.9)) +
+  geom_point(aes(shape = Reeftype, fill= Reeftype), colour="black", size = 4) +
+  scale_shape_manual(values=c(24, 21, 22)) +                                                       # Kimbe pch scheme
+  scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D")) +                        
+  scale_y_continuous(limits = c(0,280), "Mean predator count (±SE)") +                             # Need to specify y axis limits as it'll exclude 0 if you don't
+  scale_x_discrete("") +                                                                           # Don't need axis names until the bottom panel
+  theme_classic() +
+  theme(legend.position = "none") +
+  #theme(axis.text.x = element_blank()) +
+  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0)) +
+  theme(axis.text.y = element_text(family="Arial", size= 10, colour = 'black')) +
+  theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent"))
+
+reefabunbar <- 
+abunreefstats %>% 
+  filter(SiteCode != 'BRAD') %>% 
+ggplot(aes(x=SiteCode, y=mean)) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.2, position=position_dodge(.9)) +
+  geom_point(aes(shape = Reeftype, fill= Reeftype), colour="black", size = 4) +
+  scale_shape_manual(values=c(24, 21, 22)) +                                                       # Kimbe pch scheme
+  scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D")) +                        
+  scale_y_continuous(limits = c(0,50), name = NULL) +
+  scale_x_discrete("") +                                                                           # Don't need axis names until the bottom panel
+  theme_classic() +
+  theme(legend.position = c(0.8, 0.65)) +
+  theme(legend.title=element_blank()) +
+  #theme(axis.text.x = element_blank()) +
+  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0)) +
+  theme(axis.text.y = element_text(family="Arial", size= 10, colour = 'black')) +
+  theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent"))
+
+
+abunbar <- ggpubr::ggarrange(bradabunbar, reefabunbar, ncol = 2, widths = c(0.2, 1.1) )
+abunbar
+```
+
+
+
+# BIOMASS
+
+```{r biom-load}
+source("../PredBiomass/pred_biom_diw.R", local = knitr::knit_global())
+```
+
+
+## Calculate summary stats for sites
+```{r abun-sum-stats}
+biomreefstats <- 
+  merpredsum %>% 
+  group_by(Reeftype, SiteCode, Site) %>% 
+  summarise_each(funs(mean,sd,se=sd(.)/sqrt(n())), Transect_pred_biomass_kg)
+```
+
+## Plot
+```{r}
+bradbiombar <- 
+biomreefstats %>% 
+  filter(SiteCode == 'BRAD') %>% 
+ggplot(aes(x=SiteCode, y=mean)) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.2, position=position_dodge(.9)) +
+  geom_point(aes(shape = Reeftype, fill= Reeftype), colour="black", size = 4) +
+  scale_shape_manual(values=c(24, 21, 22)) +                                                       # Kimbe pch scheme
+  scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D")) +                        
+  scale_y_continuous(limits = c(0,750), "Mean predator biomass (kg ±SE)") +
+  scale_x_discrete("") +
+  theme_classic() +
+  theme(legend.position = "none") + # Don't need axis names until the bottom panel
+  #theme(axis.text.x = element_blank()) +
+  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0)) +
+  theme(axis.text.y = element_text(family="Arial", size= 10, colour = 'black')) +
+  theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent"))
+
+
+reefbiombar <- 
+biomreefstats %>% 
+    filter(SiteCode != 'BRAD') %>% 
+ggplot(aes(x=SiteCode, y=mean)) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.2, position=position_dodge(.9)) +
+  geom_point(aes(shape = Reeftype, fill= Reeftype), colour="black", size = 4) +
+  scale_shape_manual(values=c(24, 21, 22)) +                                                       # Kimbe pch scheme
+  scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D")) +                        
+  scale_y_continuous(limits = c(0,60), NULL) +
+  scale_x_discrete("") +
+  theme_classic() +
+  theme(legend.position = "none") +
+  #theme(axis.text.x = element_blank()) +
+  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0)) +
+  theme(axis.text.y = element_text(family="Arial", size= 10, colour = 'black')) +
+  theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent"))
+
+biombar <- ggpubr::ggarrange(bradbiombar, reefbiombar, ncol = 2, widths = c(0.2, 1.1) )
+biombar
+```
+
+
+# DIVERSITY
+
+```{r div-load, warning=FALSE, include=FALSE, echo=TRUE}
+source("../PredDiversity/pred_div_diw.R", local = knitr::knit_global())
+```
+
+
+## Calculate summary stats for sites
+```{r abun-sum-stats}
+divreefstats <- 
+  preddiv %>% 
+  group_by(Reeftype, SiteCode, Site) %>% 
+  summarise_each(funs(mean,sd,se=sd(.)/sqrt(n())), Shannon)
+```
+
+```{r}
+preddiv %$% 
+  summary(SiteCode)
+```
+
+
+## Plot (don't need to have BRAD on separate scale)
+```{r}
+reefdivbar <- 
+divreefstats %>% 
+   # filter(SiteCode != 'BRAD') %>% 
+ggplot(aes(x=SiteCode, y=mean)) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.2, position=position_dodge(.9)) +
+  geom_point(aes(shape = Reeftype, fill= Reeftype), colour="black", size = 4) +
+  scale_shape_manual(values=c(24, 21, 22)) +                                                       # Kimbe pch scheme
+  scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D")) +                        
+  scale_y_continuous("Mean diversity (H ±SE)") +
+  scale_x_discrete("Reef") +
+  theme_classic() +
+  theme(legend.position = "none") +
+  #theme(axis.text.x = element_blank()) +
+  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0)) +
+  theme(axis.text.y = element_text(family="Arial", size= 10, colour = 'black')) +
+  theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent"))
+reefdivbar
+```
+
+
+
+
+
+## And save
+```{r all-plot, fig.height=8.5,  fig.width=8.5}
+reefbars <- ggpubr::ggarrange(abunbar, biombar, reefdivbar, ncol = 1)
+reefbars
+ggsave(reefbars, filename= '../../output/rfigures/reefbars.tiff',  width = 174, height = 174, units = "mm", dpi = 600)
+```
+
+
+
+
+

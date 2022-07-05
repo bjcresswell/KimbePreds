@@ -25,6 +25,7 @@ Last edit: 30 Aug 2021 BJC
 # Packages and housekeeping
 ```{r packages, include=FALSE, eval=TRUE}
 library(gridExtra) #for plotting
+library(writexl)
 library(gt)
 library(lme4)      #basic model builder
 library(car)       #for regression diagnostics
@@ -201,22 +202,21 @@ summary(pred.glmmnboff)
 
 # Results (emmeans and contrasts on response scale - numbers of predators)
 ```{r abun-emmeans-results}
-# R2 if you want but not very useful for glmm
-#library(performance)
-#performance::r2(pred.glmmnboff)
-
 # emmeans and contrasts first
-abuncontrasts <- emmeans(pred.glmmnboff, pairwise ~ Reeftype, transform='response', combine=TRUE) %>%
+abuncontrasts <- 
+  emmeans(pred.glmmnboff, pairwise ~ Reeftype, transform='response', combine=TRUE) %>%
   confint() %>% 
   as.data.frame() 
 
-# pvalues
-abunpvals <- emmeans(pred.glmmnboff,  ~ Reeftype, transform='response', combine=TRUE) %>% 
+# pvalues if required/interested
+abunpvals <- 
+  emmeans(pred.glmmnboff,  ~ Reeftype, transform='response', combine=TRUE) %>% 
   pairs() %>% 
   as.data.frame() 
   
 # Combine for full results table
-abunresults <- bind_cols(abuncontrasts, abunpvals[5:6]) 
+abunresults <- 
+  bind_cols(abuncontrasts, abunpvals[5:6]) 
 
 # Write to csv
 write_csv(abunresults, file = "../../output/rtables/abunresults.csv")
@@ -231,11 +231,11 @@ abunresults
 
 
 
-# Can also check ratios (using type="response"):
+# Can also check contrast ratios (using type="response"):
 ```{r abun-emmeans-ratios}
-
 # Ratios with CI
-abunratios <- emmeans(pred.glmmnboff, pairwise ~ Reeftype, type='response', combine=TRUE) %>%
+abunratios <- 
+  emmeans(pred.glmmnboff, pairwise ~ Reeftype, type='response', combine=TRUE) %>%
   confint() %>% 
   as.data.frame()
 
@@ -245,7 +245,7 @@ abunratiopvals <- emmeans(pred.glmmnboff,  ~ Reeftype, type='response', combine=
   as.data.frame() 
 
 # Combine
-abunratios <- bind_cols(abunratios, abunratiopvals[6:7]) 
+abunratios <- bind_cols(abunratios, abunratiopvals[5:6]) 
 
 # Write to csv
 write_csv(abunratios, file = "../../output/rtables/abunratios.csv")
@@ -257,8 +257,6 @@ abunratios
 
 ```
 
-## So, taking into account overall fish abundance, pinnacles have significanly more predators on them than either offshore or near shore (11 more per 150m^2 transect)  (12 more per 150m^2 transect) reefs, but this is highly variable (confints)
-
 # Create plot data
 Final step is to create the df to be used for plot making 
 ```{r abun-plot-data}
@@ -269,7 +267,10 @@ abunplotmeans <- emmeans(pred.glmmnboff, pairwise ~ Reeftype, transform='respons
   #dplyr::select(-contrasts) %>% 
   transmute(Reeftype = emmeans$Reeftype,
             Mean = emmeans$response,
-            CI95 = emmeans$response-emmeans$lower.CL)
+            DF = emmeans$df,
+            MeanLowerCI95 = emmeans$lower.CL,
+            MeanUpperCI95 = emmeans$upper.CL
+            )
 
 # Then the 66% confidence intervals
 CI66 <- emmeans(pred.glmmnboff, pairwise ~ Reeftype, transform='response') %>%
@@ -290,10 +291,36 @@ abunplotcontrasts <- emmeans(pred.glmmnboff, pairwise ~ Reeftype, transform='res
          ) %>% 
   bind_cols(CI66)
 
-abunplotdata <- abunplotmeans %>% 
-  bind_cols(abunplotcontrasts) 
+(abunplotdata <- abunplotmeans %>% 
+  bind_cols(abunplotcontrasts) )
 
+# Save as RData for plotting
 save(abunplotdata, file='../../data/abunplotdata.RData')
+
+# HTML
+abunplotdata %>% 
+  tab_df(file="../../output/rtables/abunresults.html", title = "Abundance results")
+```
+
+
+```{r abun-pub-data}
+# Write to excel for pasting into publication - need to rename some of the columns etc.
+abunpubdata <- 
+abunplotdata %>% 
+  mutate_if(is.numeric, round, 1) %>% 
+  mutate(
+    `Abundance (n.150m-2)` = Mean,
+    `EMM 95% CI`= paste(MeanLowerCI95, MeanUpperCI95, sep = '-'), 
+    .before = DF, .keep = 'unused') %>% 
+  mutate(
+    `Pairwise contrasts` = Contrast, 
+    `Contrast effect size` = Estimate,
+    `Contrast 95% CI` = paste(contrastlowerCI95, contrastupperCI95, sep = '-'), 
+    `Contrast 66% CI` = paste(contrastlowerCI66, contrastupperCI66, sep = '-'), 
+     .keep = 'unused')
+
+abunpubdata
+write_xlsx(abunpubdata, path = "../../output/rtables/abunpubdata.xlsx")
 ```
 
 
@@ -301,7 +328,7 @@ save(abunplotdata, file='../../data/abunplotdata.RData')
 
 
 ```{r run-whole-script-chunk, include=TRUE, warnings=FALSE, message=FALSE}
-# Run this chunk to execute whole script without procucing html output
+# Run this chunk to execute whole script without producing html output
 ```
 
 

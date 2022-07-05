@@ -28,6 +28,7 @@ This document analyses predator fish biomass from the Kimbe Bay video survey dat
 #graphics.off()
 #getwd()
 library(gridExtra) #for plotting
+library(writexl)
 library(gt)
 library(lme4)      #basic model builder
 library(car)       #for regression diagnostics
@@ -165,8 +166,7 @@ biom.glmmt %>% testZeroInflation() # Looks good
 ```
 
 
-
-# Model tweaking
+# Model offset (against total fish biomass)
 Going to add the offset straight away
 ```{r biom-tweedie-offset}
 biom.glmmtoff <- update(biom.glmmt, ~ . + offset(log(Transect_fish_biomass_kg)))
@@ -181,24 +181,27 @@ AIC(biom.glmmtoff, biom.glmmt)
 
 # Check summary
 ```{r}
-#summary(biom.glmmtoff)
+summary(biom.glmmtoff)
 ```
 
 
 # Results (emmeans and contrasts on response scale - predator biomass)
 ```{r biom-emmeans-results}
 # emmeans and contrasts first
-biomcontrasts <- emmeans(biom.glmmtoff, pairwise ~ Reeftype, transform='response', combine=TRUE) %>%
+biomcontrasts <- 
+  emmeans(biom.glmmtoff, pairwise ~ Reeftype, transform='response') %>%
   confint() %>% 
   as.data.frame() 
 
-# pvalues
-biompvals <- emmeans(biom.glmmtoff,  ~ Reeftype, transform='response', combine=TRUE) %>% 
+# pvalues if required/interested
+biompvals <- 
+  emmeans(biom.glmmtoff,  ~ Reeftype, transform='response', combine=TRUE) %>% 
   pairs() %>% 
   as.data.frame() 
   
 # Combine for full results table
-biomresults <- bind_cols(biomcontrasts, biompvals[5:6]) 
+biomresults <- 
+  bind_cols(biomcontrasts, biompvals[5:6]) 
 
 # Write to csv
 write_csv(biomresults, file = "../../output/rtables/biomresults.csv")
@@ -237,7 +240,7 @@ biomratios %>%
 # Display inline
 biomratios
 ```
-Slightly different story with the ratios - don't know why!!  The story is pretty much the same however.
+CIs different with the ratios - something to do with the order of back-calculation?  The story is pretty much the same however.
 
 # Create plot data
 Final step is to create the df to be used for plot making 
@@ -250,7 +253,10 @@ biomplotmeans <- emmeans(biom.glmmtoff, pairwise ~ Reeftype, transform='response
   #dplyr::select(-contrasts) %>% 
   transmute(Reeftype = emmeans$Reeftype,
             Mean = emmeans$response,
-            CI95 = emmeans$response-emmeans$lower.CL)
+            DF = emmeans$df,
+            MeanLowerCI95 = emmeans$lower.CL,
+            MeanUpperCI95 = emmeans$upper.CL
+            )
 
 # Then the 66% confidence intervals
 biomCI66 <- emmeans(biom.glmmtoff, pairwise ~ Reeftype, transform='response') %>%
@@ -271,13 +277,41 @@ biomplotcontrasts <- emmeans(biom.glmmtoff, pairwise ~ Reeftype, transform='resp
          ) %>% 
   bind_cols(biomCI66)
 
-biomplotdata <- biomplotmeans %>% 
-  bind_cols(abunplotcontrasts) 
-
+(biomplotdata <- biomplotmeans %>% 
+  bind_cols(biomplotcontrasts))
 
 
 save(biomplotdata, file='../../data/biomplotdata.RData')
+
+biomplotdata %>% 
+  tab_df(file="../../output/rtables/biomresults.html", title = "Biomass results")
 ```
+
+
+```{r abun-pub-data}
+# Write to excel for pasting into publication - need to rename some of the columns etc.
+biompubdata <- 
+biomplotdata %>% 
+  mutate_if(is.numeric, round, 1) %>% 
+  mutate(
+    `Biomass (kg.150m-2)` = Mean,
+    `EMM 95% CI`= paste(MeanLowerCI95, MeanUpperCI95, sep = '-'), 
+    .before = DF, .keep = 'unused') %>% 
+  mutate(
+    `Pairwise contrasts` = Contrast, 
+    `Contrast effect size` = Estimate,
+    `Contrast 95% CI` = paste(contrastlowerCI95, contrastupperCI95, sep = '-'), 
+    `Contrast 66% CI` = paste(contrastlowerCI66, contrastupperCI66, sep = '-'), 
+     .keep = 'unused')
+
+biompubdata
+write_xlsx(biompubdata, path = "../../output/rtables/biompubdata.xlsx")
+```
+
+
+
+
+
 
 
 

@@ -92,7 +92,7 @@ preddiv <- preddiv %>%
                                      grepl("EMA", `TID`) ~ "EMA",
                                      grepl("HOG", `TID`) ~ "HOG",
                                      grepl("OTT", `TID`) ~ "OTT",
-                                     grepl("KIS", `TID`) ~ "KIIS"))) %>%
+                                     grepl("KIS", `TID`) ~ "KIS"))) %>%
   mutate(SiteCode = factor(SiteCode, levels= c("BRAD", "JOEL", "INGL", "KBOM",   # Pinnacles first
                                                "EMA",  "HOG", "KIS", "OTT",      # then offshore
                                                "DON", "LADI", "MADA", "SUSA"))) %>% 

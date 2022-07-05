@@ -18,6 +18,8 @@ editor_options:
   chunk_output_type: inline
 ---
 
+Last edit 23 July 2022 BJC
+
 ```{r setup, include=TRUE, warnings=FALSE, message=FALSE}
 knitr::opts_chunk$set(root.dir = "~/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/", echo = TRUE)
 #rm(list=ls())
@@ -37,39 +39,10 @@ library(patchwork)
 library(tidyverse)
 ```
 
-
-# Create themes and lists to make plotting simpler later
-```{r lists-themes, include=FALSE}
-resultstheme <-
-  theme_classic()+
-  theme(legend.position = "none")+
-  theme(axis.title.x = element_text(family="Arial", size=10, colour = 'black', vjust = -0.5))+
-  theme(axis.text.x = element_text(family="Arial", size= 10, colour = 'black', angle=0, vjust = 0))+
-        #axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0),
-        #axis.text.y = element_text(family="Arial", size= 10, colour = 'black'))+
-  theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent")) 
+Notes on aesthetics for Coral Reefs
 
 
 
-#nulltheme <- 
- # theme_classic()+
-  #theme(axis.text.x = element_blank())
-
-#emmeanslist <- list(
- # geom_pointrange(aes(ymin=lower.CL,  ymax=upper.CL)))
-  #geom_point(aes(shape = Reeftype),stat="identity", colour="black", size = 4)+
-  #scale_shape_manual(values=c(24, 21, 22))+                       # had to adapt Kimbe pch scheme
-  #scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D"))
-
-
-
-
-contrastslist <- list(
-  geom_pointrange(aes(ymin=lower.CL,  ymax=upper.CL)),
-  geom_hline(yintercept = 0, linetype='dashed'),
-  ylab(''),
-  scale_y_continuous(position = "right"))
-```
 
 
 # Abundance
@@ -97,7 +70,7 @@ abunplotresults <-
   ggplot(abunplotdata, aes(y=Mean,  x=Reeftype)) +
   ylab('Abundance (n)\n')+
   xlab(NULL)+
-  geom_linerange(aes(ymin = Mean - CI95 , ymax = Mean + CI95),  size = 0.3)+
+  geom_linerange(aes(ymin = MeanLowerCI95, ymax = MeanUpperCI95),  size = 0.5)+
   geom_point(aes(shape = Reeftype, fill= Reeftype), colour="black", size = 4)+
   scale_shape_manual(values=c(24, 21, 22))+                       # had to adapt Kimbe pch scheme
   scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D"))+
@@ -116,8 +89,8 @@ abunplotresults
 # Create contrasts figure
 abunplotcontrasts <- 
   ggplot(abunplotdata, aes(y=Estimate,  x=Contrast)) +
-  geom_linerange(aes(ymin = contrastlowerCI95,  ymax = contrastupperCI95), size = 0.3) +
-  geom_linerange(aes(ymin = contrastlowerCI66,  ymax = contrastupperCI66), size = 0.6) +
+  geom_linerange(aes(ymin = contrastlowerCI95,  ymax = contrastupperCI95), size = 0.5) +
+  geom_linerange(aes(ymin = contrastlowerCI66,  ymax = contrastupperCI66), size = 1) +
   geom_point(colour="black", size = 4)+
   geom_hline(yintercept = 0, linetype='dashed') +
   scale_y_continuous(position = "right")+
@@ -175,7 +148,7 @@ biomplotresults <-
   ggplot(biomplotdata, aes(y=Mean,  x=Reeftype)) +
   ylab('Biomass (kg)\n')+
   xlab(NULL)+
-  geom_linerange(aes(ymin = Mean - CI95 , ymax = Mean + CI95),  size = 0.3)+
+  geom_linerange(aes(ymin = MeanLowerCI95, ymax = MeanUpperCI95),  size = 0.5)+
   geom_point(aes(shape = Reeftype, fill= Reeftype), colour="black", size = 4)+
   scale_shape_manual(values=c(24, 21, 22))+                       # had to adapt Kimbe pch scheme
   scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D"))+
@@ -193,8 +166,8 @@ biomplotresults <-
 # Create contrasts figure
 biomplotcontrasts <- 
   ggplot(biomplotdata, aes(y=Estimate,  x=Contrast)) +
-  geom_linerange(aes(ymin = contrastlowerCI95,  ymax = contrastupperCI95), size = 0.3) +
-  geom_linerange(aes(ymin = contrastlowerCI66,  ymax = contrastupperCI66), size = 0.6) +
+  geom_linerange(aes(ymin = contrastlowerCI95,  ymax = contrastupperCI95), size = 0.5) +
+  geom_linerange(aes(ymin = contrastlowerCI66,  ymax = contrastupperCI66), size = 1) +
   geom_point(colour="black", size = 4)+
   geom_hline(yintercept = 0, linetype='dashed') +
   scale_y_continuous(position = "right")+
@@ -253,7 +226,7 @@ shanplotresults <-
   ggplot(shanplotdata, aes(y=Mean,  x=Reeftype)) +
   ylab('Diversity (H)\n')+
   xlab('Reef type')+
-  geom_linerange(aes(ymin = Mean - CI95 , ymax = Mean + CI95),  size = 0.3)+
+  geom_linerange(aes(ymin = Mean - CI95 , ymax = Mean + CI95),  size = 0.5)+
   geom_point(aes(shape = Reeftype, fill= Reeftype), colour="black", size = 4)+
   scale_shape_manual(values=c(24, 21, 22))+                       # had to adapt Kimbe pch scheme
   scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D"))+
@@ -271,8 +244,8 @@ shanplotresults <-
 # Create contrasts figure
 shanplotcontrasts <- 
   ggplot(shanplotdata, aes(y=Estimate,  x=Contrast)) +
-  geom_linerange(aes(ymin = contrastlowerCI95,  ymax = contrastupperCI95), size = 0.3) +
-  geom_linerange(aes(ymin = contrastlowerCI66,  ymax = contrastupperCI66), size = 0.6) +
+  geom_linerange(aes(ymin = contrastlowerCI95,  ymax = contrastupperCI95), size = 0.5) +
+  geom_linerange(aes(ymin = contrastlowerCI66,  ymax = contrastupperCI66), size = 1) +
   geom_point(colour="black", size = 4)+
   geom_hline(yintercept = 0, linetype='dashed') +
   scale_y_continuous(position = "right")+
@@ -297,13 +270,13 @@ shanplotcontrasts <-
 
 ```{r shannon-plot-save}
 # Save
-#ggsave(shanfig, filename= '../../output/rfigures/shan_fig.png', width=7,  height=2, dpi = 500 )
+ggsave(shanfig, filename= '../../output/rfigures/shan_fig.png', width=7,  height=2, dpi = 500 )
 ```
 
 
 
 # Combined  figure - hacky hacky and more hacky
-```{r graph-combined, fig.height = 5, fig.width = 8}
+```{r graph-combined, fig.height=5, fig.width=, warning=FALSE}
 # Using ggarrange from ggpubr
 #mainfig <-   ggarrange(abunfig, biomfig, shanfig, nrow =3)
 # Doesn't align very well, as it squashes in axes where there are decimal points that make the numbers wider
@@ -319,13 +292,18 @@ right.panel <-
   abunplotdata %>%
   filter(Reeftype == 'P') %>% 
   ggplot() +
-  ylab("Contrast effect size estimate (±95/66% CI)")
+  ylab("Effect size (±95/66% CI)") +
+  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust = 10))
 
-mainfig1 <- ggpubr::ggarrange(mainfig, right.panel, ncol = 2, widths = c(1, 0.05) )
+
+#mainfig1 <-
+  ggpubr::ggarrange(mainfig, right.panel, ncol = 2, widths = c(1, 0.001) )
 
 # 2. Using ggpubr::annotate_figure (requires passing the mainfig to ggarrange first anyways as it doesn't work with the plot 'as-is')
-mainfig2 <- ggpubr::ggarrange(mainfig)
-mainfig2 <- annotate_figure(mainfig2, right = text_grob("Contrast effect size estimate (±95/66% CI)", rot = 90))
+mainfig2 <- 
+  ggpubr::ggarrange(mainfig) %>% 
+  annotate_figure(mainfig2, right = text_grob("Effect size (±95/66% CI)", vjust = 2.2, rot = 270, family = 'Arial', size = 10))
+  
 
 mainfig1
 mainfig2

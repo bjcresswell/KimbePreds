@@ -45,6 +45,7 @@ getwd()
 ```{r div-packages,echo=TRUE, include=FALSE, eval=TRUE}
 rm(list=ls())
 library(gridExtra) #for plotting
+library(writexl)
 library(gt)
 library(lme4)      #basic model builder
 library(car)       #for regression diagnostics
@@ -331,11 +332,13 @@ Will use gaussian and tweedie distributions and check.
 ## Gaussian and Tweedie 
 ```{r shan-fitmodel}
 # Gaussian (trying post ML2021)
+set.seed(123)
 pshan.glmm <- glmmTMB(Shannon ~ Reeftype+(1|Site), data = preddiv, family=gaussian(), ziformula = ~0,  REML = FALSE)
 pshan.glmmT <- glmmTMB(Shannon ~ Reeftype+(1|Site), data = preddiv, family=tweedie(link = 'log'), ziformula = ~0, REML = FALSE)
 ```
-## AIC 
 
+
+## AIC 
 ```{r shan-model-aic}
 AIC(pshan.glmm, pshan.glmmT)
 ```
@@ -497,7 +500,7 @@ pshan.glmmT %>%
 ```
 
 
-## Plot data
+# Create plot data
 ```{r shan-plot-data}
 # First calculate the emmeans estimates
 shanplotmeans <- emmeans(pshan.glmmT, pairwise ~ Reeftype, transform='response') %>% 
@@ -506,10 +509,13 @@ shanplotmeans <- emmeans(pshan.glmmT, pairwise ~ Reeftype, transform='response')
   #dplyr::select(-contrasts) %>% 
   transmute(Reeftype = emmeans$Reeftype,
             Mean = emmeans$response,
-            CI95 = emmeans$response-emmeans$lower.CL)
+            DF = emmeans$df,
+            MeanLowerCI95 = emmeans$lower.CL,
+            MeanUpperCI95 = emmeans$upper.CL
+            )
 
 # Then the 66% confidence intervals
-shanCI66 <- emmeans(pshan.glmmT, pairwise ~ Reeftype, transform='response') %>%
+CI66 <- emmeans(pshan.glmmT, pairwise ~ Reeftype, transform='response') %>%
   confint(level = 0.66) %>% 
   as_tibble() %>% 
   transmute(contrastlowerCI66 = contrasts$lower.CL,
@@ -525,14 +531,44 @@ shanplotcontrasts <- emmeans(pshan.glmmT, pairwise ~ Reeftype, transform='respon
     contrastlowerCI95 = contrasts$lower.CL,
     contrastupperCI95 = contrasts$upper.CL
          ) %>% 
-  bind_cols(shanCI66)
+  bind_cols(CI66)
 
-shanplotdata <- shanplotmeans %>% 
-  bind_cols(shanplotcontrasts) 
+(shanplotdata <- shanplotmeans %>% 
+  bind_cols(shanplotcontrasts))
 
 
 save(shanplotdata, file='../../data/shanplotdata.RData')
 
 ```
+
+
+
+
+
+
+
+..And table for publication
+```{r shan-pub-data}
+# Write to excel for pasting into publication - need to rename some of the columns etc.
+shanpubdata <- 
+shanplotdata %>% 
+  mutate_if(is.numeric, round, 2) %>% 
+  mutate(
+    `Shannon diversity (H 150m-2)` = Mean,
+    `EMM 95% CI`= paste(MeanLowerCI95, MeanUpperCI95, sep = '-'), 
+    .before = DF, .keep = 'unused') %>% 
+  mutate(
+    `Pairwise contrasts` = Contrast, 
+    `Contrast effect size` = Estimate,
+    `Contrast 95% CI` = paste(contrastlowerCI95, contrastupperCI95, sep = '-'), 
+    `Contrast 66% CI` = paste(contrastlowerCI66, contrastupperCI66, sep = '-'), 
+     .keep = 'unused')
+
+shanpubdata
+write_xlsx(shanpubdata, path = "../../output/rtables/shanpubdata.xlsx")
+```
+
+
+
 
 
