@@ -162,7 +162,8 @@ preds <- merfish %>%
            Family == "Haemulidae" | # Grunts/sweetlips
            Family == "Sphyraenidae" | # Barracudas
            Family == "Serranidae"| # Groupers (also contains pseudanthias - will get rid of these below)
-           Family == "Carcharhinidae") # Sharks (only one family observed in KB)
+           Family == "Carcharhinidae") %>% # Sharks (only one family observed in KB)
+  droplevels()
 head(preds)
 
 # Now need to filter out any outlier, non-predator taxa that have snuck in:

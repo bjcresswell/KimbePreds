@@ -17,7 +17,7 @@
 
 # Housekeeping
 setwd("/Users/bjcresswell/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/code/PredDiversity")
-rm(list=ls())
+#rm(list=ls())
 
 library(writexl)
 library(readxl)
@@ -146,8 +146,27 @@ RTtax <- pred.count %>%
 RTtax # 189 rows - 63 taxa * 3 reef types
 
 
+# Need to pivot this wider to include as SI Table
 
-# This for all preds - can merge  with the  LRT and P values from the multivariate abundance analysis to pull out taxa driving differences
+## Recreate the RTtaxa df 
+RTtable <- 
+  pred.count %>% 
+  group_by(Family, Taxa, Reeftype) %>% 
+  summarise_each(funs(Total = sum, Mean = mean,
+                      `S.E.`= sd(.)/sqrt(n())), Count) %>%      # but with neat variable names
+  group_by(Family, Taxa) %>%                                    # regroup so Family and Taxa will retain their stx                        
+  pivot_wider(names_from = Reeftype,                            # want reeftype groupings in variable names
+              values_from = c(Total, Mean,`S.E.`),     # neater variable names
+              names_vary = 'slowest',                           # puts the columns in order that groups reeftype together
+              names_glue = "{Reeftype} {.value}") %>%           # puts the reef type ahead of  'Total', 'Mean' etc..
+  mutate(`Study total n` = `Pinnacle Total` + `Offshore Total` + `Nearshore Total`, .keep = 'unused')  %>% 
+  mutate_if(is.numeric, round, 2)                               # rounds everything off
+
+## And save
+write_csv(x = RTtable, file = 'output/rtables/SItable_alltaxa.csv')
+ 
+
+# The above is for all preds - can merge  with the LRT and P values from the multivariate abundance analysis to pull out 6 taxa driving differences - used for Fig 4.
  
 # Load file
 load(file = "../../data/mvabund_unitests.RData")

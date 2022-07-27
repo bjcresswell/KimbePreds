@@ -231,6 +231,8 @@ abunresults
 
 
 
+
+
 # Can also check contrast ratios (using type="response"):
 ```{r abun-emmeans-ratios}
 # Ratios with CI
@@ -302,7 +304,7 @@ abunplotdata %>%
   tab_df(file="../../output/rtables/abunresults.html", title = "Abundance results")
 ```
 
-
+..And table for publication
 ```{r abun-pub-data}
 # Write to excel for pasting into publication - need to rename some of the columns etc.
 abunpubdata <- 

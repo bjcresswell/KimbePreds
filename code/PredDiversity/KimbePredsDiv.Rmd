@@ -250,7 +250,7 @@ richratiospvals <- emmeans(prglmmp,  ~ Reeftype, type='response', combine=TRUE) 
   as.data.frame() 
 
 # Combine
-richratios <- bind_cols(richratios, richratiospvals[6:7]) 
+richratios <- bind_cols(richratios, richratiospvals[5:6]) 
 
 # Write to csv
 write_csv(richratios, file = "../../output/rtables/richratios.csv")
@@ -477,10 +477,10 @@ pshan.glmmT %>%
   pairs() %>% 
   summary(infer=TRUE) 
 
-# Ratios with CI
-#emmeans(pshan.glmmT, pairwise ~ Reeftype, type='response') %>%
-#  confint() %>% 
-#  as.data.frame()
+# Ratios with 66% CI
+emmeans(pshan.glmmT, pairwise ~ Reeftype, type='response') %>%
+  confint(level = 0.66) %>% 
+  as.data.frame()
 
 # p values
 #shanratiopvals <- emmeans(pshan.glmmT,  ~ Reeftype, type='response', combine=TRUE) %>% 
