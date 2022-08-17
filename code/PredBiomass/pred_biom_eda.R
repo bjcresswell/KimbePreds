@@ -17,25 +17,25 @@ head(merpredsum)
 ## Firstly on Transect_Biomass ##
 
 # 1. By site only:
-(predsitestats <- merpredsum_kg %>% 
+(predsitestats <- merpredsum %>% 
     group_by(Reeftype, SiteCode) %>% 
-    summarise_each(funs(mean,sd,se=sd(.)/sqrt(n())), Transect_biomass_kg))
+    summarise_each(funs(mean,sd,se=sd(.)/sqrt(n())), Transect_pred_biomass_kg))
 
 # 2. By site and survey period (to check if there are any crazy differences between survey periods)
-(predsitesurvstats <- merpredsum_kg %>% 
+(predsitesurvstats <- merpredsum %>% 
     group_by(SiteCode, SurvCode) %>% 
-    summarise_each(funs(mean,sd,se=sd(.)/sqrt(n())), Transect_biomass_kg))
+    summarise_each(funs(mean,sd,se=sd(.)/sqrt(n())), Transect_pred_biomass_kg))
 
 # 3. By reeftype only: (this is what we are most interested in)
-(predreeftypestats <- merpredsum_kg %>% 
+(predreeftypestats <- merpredsum %>% 
     group_by(Reeftype) %>% 
-    summarise_each(funs(mean,sd,se=sd(.)/sqrt(n())), Transect_biomass_kg))
+    summarise_each(funs(mean,sd,se=sd(.)/sqrt(n())), Transect_pred_biomass_kg))
 # Can check the means in this output table - should be the same as in emmeans in GLM later on
 
 # 4. By reeftype and survey period (more to check )
-(predreeftypesurvstats <- merpredsum_kg %>% 
+(predreeftypesurvstats <- merpredsum %>% 
     group_by(Reeftype, SurvCode) %>% 
-    summarise_each(funs(mean,sd,se=sd(.)/sqrt(n())), Transect_biomass_kg))
+    summarise_each(funs(mean,sd,se=sd(.)/sqrt(n())), Transect_pred_biomass_kg))
 
 
 # Graphics
@@ -43,13 +43,13 @@ head(merpredsum)
 # Summary histograms
 
 # On raw predator biomass
-ggplot(merpredsum_kg, aes(Transect_biomass_kg)) + 
+ggplot(merpredsum, aes(Transect_pred_biomass_kg)) + 
   geom_histogram(binwidth=50, color="black", fill="grey")
 
 # Lots of zeros, very right skewed
 
 # On log pred biomass
-ggplot(merpredsum_kg, aes(x=log(Transect_biomass_kg))) + 
+ggplot(merpredsum, aes(x=log(Transect_pred_biomass_kg))) + 
   geom_histogram(binwidth=0.4, color="black", fill="grey")
 
 # Looks like we'll need a model family on the log scale
@@ -92,7 +92,7 @@ ssbar <- ggplot(predsitesurvstats, aes(x=SiteCode, y=mean, fill=SurvCode))+
 ssbar # 
 
 # Box plot - for median values
-ssbox <- ggplot(merpredsum_kg, aes(x=SiteCode, y=Transect_biomass_kg, fill=SurvCode))+
+ssbox <- ggplot(merpredsum, aes(x=SiteCode, y=Transect_pred_biomass_kg, fill=SurvCode))+
   geom_boxplot()+
   scale_y_continuous("Median predator biomass (±SE)") +
   scale_x_discrete("Site and survey period")+

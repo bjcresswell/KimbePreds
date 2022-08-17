@@ -5,7 +5,7 @@
 # Last edit 31.8.2021 BJC
 
 
-rm(list=ls())
+#rm(list=ls())
 graphics.off()
 library(readxl)
 library(tidyverse)
