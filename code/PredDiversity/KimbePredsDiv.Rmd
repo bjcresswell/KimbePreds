@@ -357,7 +357,7 @@ simulateResiduals(pshan.glmmT, plot=TRUE) # Fails dispersion and hv but QQ plot 
 ```{r shan-zit}
 testZeroInflation(pshan.glmmT)
 ```
--> Slightly under-dispersed
+-> Slightly under-dispersed - non-significant
 
 
 
@@ -477,10 +477,6 @@ pshan.glmmT %>%
   pairs() %>% 
   summary(infer=TRUE) 
 
-# Ratios with 66% CI
-emmeans(pshan.glmmT, pairwise ~ Reeftype, type='response') %>%
-  confint(level = 0.66) %>% 
-  as.data.frame()
 
 # p values
 #shanratiopvals <- emmeans(pshan.glmmT,  ~ Reeftype, type='response', combine=TRUE) %>% 
@@ -514,12 +510,6 @@ shanplotmeans <- emmeans(pshan.glmmT, pairwise ~ Reeftype, transform='response')
             MeanUpperCI95 = emmeans$upper.CL
             )
 
-# Then the 66% confidence intervals
-CI66 <- emmeans(pshan.glmmT, pairwise ~ Reeftype, transform='response') %>%
-  confint(level = 0.66) %>% 
-  as_tibble() %>% 
-  transmute(contrastlowerCI66 = contrasts$lower.CL,
-            contrastupperCI66 = contrasts$upper.CL)
 
 # And bind to the 95% CI contrasts 
 shanplotcontrasts <- emmeans(pshan.glmmT, pairwise ~ Reeftype, transform='response') %>%
@@ -529,9 +519,7 @@ shanplotcontrasts <- emmeans(pshan.glmmT, pairwise ~ Reeftype, transform='respon
     Contrast = contrasts$contrast, 
     Estimate = contrasts$estimate, 
     contrastlowerCI95 = contrasts$lower.CL,
-    contrastupperCI95 = contrasts$upper.CL
-         ) %>% 
-  bind_cols(CI66)
+    contrastupperCI95 = contrasts$upper.CL)
 
 (shanplotdata <- shanplotmeans %>% 
   bind_cols(shanplotcontrasts))
@@ -561,7 +549,6 @@ shanplotdata %>%
     `Pairwise contrasts` = Contrast, 
     `Contrast effect size` = Estimate,
     `Contrast 95% CI` = paste(contrastlowerCI95, contrastupperCI95, sep = '-'), 
-    `Contrast 66% CI` = paste(contrastlowerCI66, contrastupperCI66, sep = '-'), 
      .keep = 'unused')
 
 shanpubdata

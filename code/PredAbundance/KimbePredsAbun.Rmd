@@ -98,7 +98,7 @@ hist <- ggplot(predsum, aes(x=No_Preds)) +
 
 rtbar <- ggplot(predreeftypestats, aes(x=Reeftype, y=mean))+
   geom_bar(stat="identity", position="dodge", color="black")+
-  scale_y_continuous(limits = c(0,90), "Mean predator count (±SE)")+
+  scale_y_continuous(limits = c(0,250), "Mean predator count (±SE)")+
   scale_x_discrete("Reef type and survey period")+
   labs(title="Predator abundance by reef type")+
   scale_fill_viridis_d()+
@@ -180,8 +180,10 @@ emmeans(pred.glmmnb, pairwise~Reeftype, transform="response") %>%
 -> So emmeans suggest that pinnacles have more predators than both offshore emergent and near shore reefs, but that this is highly variable.  What about if we take into account overall numbers of fishes?
 
 
-# Model tweaking
-Now going to add the offset (against total numers of fishes in assemblage)
+# Adjust model to account for variations in overall fish communities
+-> On reefs where there are just generally no fish there will be consequently lower predators
+We could analyse predator abundance as a proportion/% of overall fish abundance but modelling proportions is weak and problematic
+So we can add an offset instead
 On log() scale as that is the link scale
 ```{r abun-nb-offset, message=FALSE, }
 pred.glmmnboff <- update(pred.glmmnb, ~ . + offset(log(No_Fish)))
@@ -274,24 +276,18 @@ abunplotmeans <- emmeans(pred.glmmnboff, pairwise ~ Reeftype, transform='respons
             MeanUpperCI95 = emmeans$upper.CL
             )
 
-# Then the 66% confidence intervals
-CI66 <- emmeans(pred.glmmnboff, pairwise ~ Reeftype, transform='response') %>%
-  confint(level = 0.66) %>% 
-  as_tibble() %>% 
-  transmute(contrastlowerCI66 = contrasts$lower.CL,
-            contrastupperCI66 = contrasts$upper.CL)
 
 # And bind to the 95% CI contrasts 
-abunplotcontrasts <- emmeans(pred.glmmnboff, pairwise ~ Reeftype, transform='response') %>%
+abunplotcontrasts <- 
+  pred.glmmnboff %>% 
+  emmeans(pairwise ~ Reeftype, transform='response') %>%
   confint() %>% 
   as_tibble() %>% 
   transmute(
     Contrast = contrasts$contrast, 
     Estimate = contrasts$estimate, 
     contrastlowerCI95 = contrasts$lower.CL,
-    contrastupperCI95 = contrasts$upper.CL
-         ) %>% 
-  bind_cols(CI66)
+    contrastupperCI95 = contrasts$upper.CL)         
 
 (abunplotdata <- abunplotmeans %>% 
   bind_cols(abunplotcontrasts) )
@@ -318,7 +314,6 @@ abunplotdata %>%
     `Pairwise contrasts` = Contrast, 
     `Contrast effect size` = Estimate,
     `Contrast 95% CI` = paste(contrastlowerCI95, contrastupperCI95, sep = '-'), 
-    `Contrast 66% CI` = paste(contrastlowerCI66, contrastupperCI66, sep = '-'), 
      .keep = 'unused')
 
 abunpubdata
