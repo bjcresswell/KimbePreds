@@ -214,7 +214,8 @@ reefdivbar
 ```{r all-plot, fig.height=8.5,  fig.width=8.5}
 reefbars <- ggpubr::ggarrange(abunbar, biombar, reefdivbar, ncol = 1)
 reefbars
-ggsave(reefbars, filename= '../../output/rfigures/reefbars.tiff',  width = 174, height = 174, units = "mm", dpi = 600)
+ggsave(reefbars, filename= '../../output/rfigures/SI_reefbars.tiff',  width = 174, height = 174, units = "mm", dpi = 600)
+ggsave(reefbars, filename= '../../output/rfigures/SI_reefbars.png',  width = 174, height = 174, units = "mm", dpi = 600)
 ```
 
 

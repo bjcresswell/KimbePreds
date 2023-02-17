@@ -4,7 +4,7 @@
 # Last edit 19.8.2021  BJC
 
 # Housekeeping
-rm(list=ls())
+#rm(list=ls())
 setwd("~/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/code/PredAbundance")
 library(tidyverse)
 library(artyfarty)

@@ -296,20 +296,19 @@ right.panel <-
 mainfig1 <-
   ggpubr::ggarrange(mainfig, right.panel, ncol = 2, widths = c(1, 0.001) )
 
-# 2. Using ggpubr::annotate_figure (requires passing the mainfig to ggarrange first anyways as it doesn't work with the plot 'as-is')
-mainfig2 <- 
-  ggpubr::ggarrange(mainfig) +
-  annotate_figure(mainfig, right = text_grob("Effect size (+ 95 CI)", vjust = 2.2, rot = 270, family = 'Arial', size = 10))
-  
 
 mainfig1
- mainfig2
+
 ```
 
-
+# Save
 ```{r graph-combined, fig.height = 5, fig.width = 8}
-ggsave(mainfig1, filename= '../../output/rfigures/main_fig1.tiff',  width = 174, height = 107, units = "mm", dpi = 600)
- ggsave(mainfig2, filename= '../../output/rfigures/main_fig2.tiff',  width = 174, height = 107, units = "mm", dpi = 600)
+# Large size
+ggsave(mainfig1, filename= '../../output/rfigures/main_fig_hires.tiff',  width = 174, height = 107, units = "mm", dpi = 600)
+
+# Small size
+ggsave(mainfig1, filename= '../../output/rfigures/main_fig_lowres.png',  width = 160, height = 100, units = "mm", dpi = 300)
+
 
 ```
 

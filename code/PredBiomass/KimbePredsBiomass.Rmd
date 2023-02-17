@@ -241,7 +241,25 @@ So non-significant difference between pinnacles and offshore reefs but other con
 biomratios <- emmeans(biom.glmmtoff, pairwise ~ Reeftype, type='response', combine=TRUE) %>%
   confint() %>% 
   as.data.frame()
+```
 
+
+```{r biom-emmeans-ratios}
+biom.glmmtoff %>% 
+emmeans(pairwise ~ Reeftype, type='response', combine=TRUE) %>%
+  confint() %>% 
+  as.data.frame()
+
+biom.glmmtoff %>% 
+emmeans( ~ Reeftype, type='response',) %>% 
+  pairs() %>% 
+  summary(infer=TRUE) %>% 
+  as.data.frame()
+
+```
+
+
+```{r biom-emmeans-ratios}
 # p values
 biomratiopvals <- emmeans(biom.glmmtoff,  ~ Reeftype, type='response', combine=TRUE) %>% 
   pairs() %>% 
@@ -305,6 +323,8 @@ biomplotdata %>%
 biompubdata <- 
 biomplotdata %>% 
   mutate_if(is.numeric, round, 1) %>% 
+  bind_cols(biomratios[c(8,11,12)]) %>% 
+  mutate_if(is.numeric, round, 2) %>% 
   mutate(
     `Biomass (kg.150m-2)` = Mean,
     `EMM 95% CI`= paste(MeanLowerCI95, MeanUpperCI95, sep = '-'), 
@@ -312,7 +332,11 @@ biomplotdata %>%
   mutate(
     `Pairwise contrasts` = Contrast, 
     `Contrast effect size` = Estimate,
-    `Contrast 95% CI` = paste(contrastlowerCI95, contrastupperCI95, sep = '-'), .keep = 'unused')
+    `Contrast 95% CI` = paste(contrastlowerCI95, contrastupperCI95, sep = '-'), .keep = 'unused') %>% 
+  mutate(
+    `Contrast ratio` = contrasts.ratio,
+    `Contrast ratio 95% CI` = paste(contrasts.lower.CL, contrasts.upper.CL, sep = '-'),
+    .keep = 'unused')
 
 biompubdata
 write_xlsx(biompubdata, path = "../../output/rtables/biompubdata.xlsx")

@@ -35,7 +35,7 @@ getwd()
 
 ## Housekeeping
 ```{r housekeep}
-rm(list=ls())
+#rm(list=ls())
 graphics.off()
 ```
 

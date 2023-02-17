@@ -120,14 +120,20 @@ grid.arrange(hist, rtbar, ncol=2)
 Basic GLMM with site as random factor. Will introduce offset later on.
 Trialled other error families but all poor fit: Gaussian, Poisson, Gamma, Beta (on %) etc
 
-# Model formulas
+# Model formulas (have gone back and checked possible influence of survey period as a nested random effect)
 ```{r abun-model-fit}
 # Neg binom 2 (Neg binom 1 poor fit)
-pred.glmmnb <- glmmTMB(No_Preds~Reeftype+(1|SiteCode), data=predsum, family=nbinom2())  
+pred.glmmnb <- glmmTMB(No_Preds~Reeftype + (1|SiteCode), data=predsum, family=nbinom2())  
+pred.glmmnb1 <- glmmTMB(No_Preds~Reeftype + (1|SurvCode/SiteCode), data=predsum, family=nbinom2())  
+pred.glmmnb2 <- glmmTMB(No_Preds~Reeftype + (1|SiteCode/SurvCode), data=predsum, family=nbinom2())  
+pred.glmmnb3 <- glmmTMB(No_Preds~Reeftype + (1|SiteSurv), data=predsum, family=nbinom2())  
+pred.glmmnb4 <- glmmTMB(No_Preds~Reeftype + SurvCode + (1|SiteCode), data=predsum, family=nbinom2())  
+
+
 # ZI (on neg binom 2)
-pred.glmmzi <- glmmTMB(No_Preds~Reeftype+(1|SiteCode), data=predsum, family=nbinom2(), ziformula=~1)
+pred.glmmzi <- glmmTMB(No_Preds~Reeftype+(1|SurvCode/SiteCode), data=predsum, family=nbinom2(), ziformula=~1)
 # Tweedie
-pred.glmmt <- glmmTMB(No_Preds~Reeftype+(1|SiteCode), data=predsum, family=tweedie())  
+pred.glmmt <- glmmTMB(No_Preds~Reeftype+(1|SurvCode/SiteCode), data=predsum, family=tweedie())  
 ```
 
 # Source code for all models trialled if required (model comparisons etc)
@@ -145,12 +151,28 @@ t.resid <- simulateResiduals(pred.glmmt, plot=T) #
 ```
 -> All look ok apart from overdispersion
 
+# All NB models together
+```{r}
+simulateResiduals(pred.glmmnb, plot=T)
+simulateResiduals(pred.glmmnb1, plot=T)
+simulateResiduals(pred.glmmnb2, plot=T)
+simulateResiduals(pred.glmmnb3, plot=T)
+simulateResiduals(pred.glmmnb4, plot=T)
+```
+
+
 
 # Validation with AIC
 ```{r abun-aic1}
 AIC(pred.glmmnb, pred.glmmzi, pred.glmmt)
 ```
 -> NB model best and most parsimonious fit, but will check for zero inflation on that model
+
+# All NB models together
+```{r}
+AIC(pred.glmmnb, pred.glmmnb1, pred.glmmnb2, pred.glmmnb3, pred.glmmnb4)
+```
+
 
 # ZI interrogation
 ```{r abun-nb-zicheck}
@@ -173,26 +195,60 @@ exp(-21.2) -> and corresponding almost no odds that any zeros false either
 
 
 # Model interrogation
+```{r}
+summary(pred.glmmnb)
+```
+
+
+```{r}
+summary(pred.glmmnb1)
+```
+
+
+```{r}
+summary(pred.glmmnb2)
+```
+
+
+```{r}
+summary(pred.glmmnb3)
+```
+# With SurvCode as Fixed Effect
+```{r}
+summary(pred.glmmnb4)
+```
+
+```{r}
+
+```
+
+
 ```{r abun-nb-eda}
 emmeans(pred.glmmnb, pairwise~Reeftype, transform="response") %>% 
   confint()
+emmeans(pred.glmmnb2, pairwise~Reeftype, transform="response") %>% 
+  confint()
+emmeans(pred.glmmnb4, pairwise~SurvCode, transform="response") %>% 
+  confint()
 ```
--> So emmeans suggest that pinnacles have more predators than both offshore emergent and near shore reefs, but that this is highly variable.  What about if we take into account overall numbers of fishes?
+-> So emmeans suggest that pinnacles have more predators than both offshore emergent and near shore reefs, but that this is highly variable.  What about if we take into account overall abundance for whole fish communities?
 
 
 # Adjust model to account for variations in overall fish communities
 -> On reefs where there are just generally no fish there will be consequently lower predators
-We could analyse predator abundance as a proportion/% of overall fish abundance but modelling proportions is weak and problematic
+We could analyse predator abundance as a proportion/% of overall fish abundance but modelling proportions has its own issues around error distributions (a defined scale 0-100% where variance decreases towards either end of the scale)
 So we can add an offset instead
 On log() scale as that is the link scale
 ```{r abun-nb-offset, message=FALSE, }
 pred.glmmnboff <- update(pred.glmmnb, ~ . + offset(log(No_Fish)))
+pred.glmmnboff2 <- update(pred.glmmnb2, ~ . + offset(log(No_Fish)))
+
 ```
 
 
 # Revalidation with AIC
 ```{r abun-aic2}
-AIC(pred.glmmnb,  pred.glmmnboff)
+AIC(pred.glmmnb,  pred.glmmnboff, pred.glmmnboff2)
 ```
 -> Improved fit for offset model
 
@@ -201,6 +257,12 @@ AIC(pred.glmmnb,  pred.glmmnboff)
 ```{r abun-model-summary}
 summary(pred.glmmnboff)
 ```
+
+```{r}
+emmeans(pred.glmmnboff, pairwise ~ Reeftype, transform='response', combine=TRUE) %>%
+  confint()
+```
+
 
 # Results (emmeans and contrasts on response scale - numbers of predators)
 ```{r abun-emmeans-results}
@@ -249,7 +311,12 @@ abunratiopvals <- emmeans(pred.glmmnboff,  ~ Reeftype, type='response', combine=
   as.data.frame() 
 
 # Combine
-abunratios <- bind_cols(abunratios, abunratiopvals[5:6]) 
+abunratios <- bind_cols(abunratios, abunratiopvals[5:6]) %>% 
+  mutate_if(is.numeric, round, 2)
+
+# Save as RData for plotting
+save(abunratios, file='../../data/abunratios.RData')
+
 
 # Write to csv
 write_csv(abunratios, file = "../../output/rtables/abunratios.csv")
@@ -306,15 +373,21 @@ abunplotdata %>%
 abunpubdata <- 
 abunplotdata %>% 
   mutate_if(is.numeric, round, 1) %>% 
+  bind_cols(abunratios[c(8,11,12)]) %>% 
+  mutate_if(is.numeric, round, 2) %>% 
   mutate(
     `Abundance (n.150m-2)` = Mean,
     `EMM 95% CI`= paste(MeanLowerCI95, MeanUpperCI95, sep = '-'), 
     .before = DF, .keep = 'unused') %>% 
   mutate(
     `Pairwise contrasts` = Contrast, 
-    `Contrast effect size` = Estimate,
-    `Contrast 95% CI` = paste(contrastlowerCI95, contrastupperCI95, sep = '-'), 
-     .keep = 'unused')
+    `Effect size (n.150m-2)` = Estimate,
+    `Effect size 95% CI` = paste(contrastlowerCI95, contrastupperCI95, sep = '-'), 
+     .keep = 'unused') %>% 
+  mutate(
+    `Contrast ratio` = contrasts.ratio,
+    `Contrast ratio 95% CI` = paste(contrasts.lower.CL, contrasts.upper.CL, sep = '-'),
+    .keep = 'unused')
 
 abunpubdata
 write_xlsx(abunpubdata, path = "../../output/rtables/abunpubdata.xlsx")

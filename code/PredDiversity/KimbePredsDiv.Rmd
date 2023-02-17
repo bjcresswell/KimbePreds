@@ -43,7 +43,7 @@ getwd()
 
 # Packages and housekeeping
 ```{r div-packages,echo=TRUE, include=FALSE, eval=TRUE}
-rm(list=ls())
+#rm(list=ls())
 library(gridExtra) #for plotting
 library(writexl)
 library(gt)
@@ -468,20 +468,20 @@ shanresults <- bind_cols(shancontrasts, shanpvals[5:6])
 
 ```
 
+
 ## Ratios
 Calculate pairwise contrasts on ratio scale (inc 95% CI and Pvals)
 ```{r shan-emmeans-ratios}
 
-pshan.glmmT %>% 
-  emmeans(~Reeftype, type='response') %>% 
-  pairs() %>% 
-  summary(infer=TRUE) 
-
-
+shanratios <- pshan.glmmT %>% 
+  emmeans(pairwise ~ Reeftype, type='response', combine = TRUE) %>% 
+  confint() %>% 
+  as.data.frame()
+  
 # p values
-#shanratiopvals <- emmeans(pshan.glmmT,  ~ Reeftype, type='response', combine=TRUE) %>% 
-#  pairs() %>% 
-#  as.data.frame() 
+shanratiopvals <- emmeans(pshan.glmmT,  ~ Reeftype, type='response', combine=TRUE) %>% 
+  confint() %>% 
+  as.data.frame() 
 
 # Combine
 #shanratios <- bind_cols(shanratios, shanratiopvals[6:7]) 
@@ -538,8 +538,10 @@ save(shanplotdata, file='../../data/shanplotdata.RData')
 ..And table for publication
 ```{r shan-pub-data}
 # Write to excel for pasting into publication - need to rename some of the columns etc.
-shanpubdata <- 
+shanpubdata <-
 shanplotdata %>% 
+  #mutate_if(is.numeric, round, 1) %>% 
+  bind_cols(shanratios[c(8,11,12)]) %>% 
   mutate_if(is.numeric, round, 2) %>% 
   mutate(
     `Shannon diversity (H 150m-2)` = Mean,
@@ -549,7 +551,11 @@ shanplotdata %>%
     `Pairwise contrasts` = Contrast, 
     `Contrast effect size` = Estimate,
     `Contrast 95% CI` = paste(contrastlowerCI95, contrastupperCI95, sep = '-'), 
-     .keep = 'unused')
+     .keep = 'unused') %>% 
+  mutate(
+    `Contrast ratio` = contrasts.ratio,
+    `Contrast ratio 95% CI` = paste(contrasts.lower.CL, contrasts.upper.CL, sep = '-'),
+    .keep = 'unused')
 
 shanpubdata
 write_xlsx(shanpubdata, path = "../../output/rtables/shanpubdata.xlsx")
