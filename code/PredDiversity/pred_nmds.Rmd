@@ -46,6 +46,7 @@ graphics.off()
 library(ggdendro)
 library(vegan)
 library(ggvegan)
+library(magrittr)
 library(tidyverse)
 ```
 
@@ -92,7 +93,7 @@ env <- preddiv[1:10] %>%
 predmatrix <- preddiv[c(1,11:73)] %>%  # Keep TID in
   column_to_rownames("TID") %>%        # And then set as row names
     +0.01 #%>%
-  filter_all(any_vars(. != 0)) # Drop transects with only 0 observations (22 in total)
+  #filter_all(any_vars(. != 0)) # Drop transects with only 0 observations (22 in total)
 ```
 
 - and convert to distance matrix, based on Bray-Curtis
@@ -104,6 +105,7 @@ preddist <- vegdist(predmatrix,  method = "bray")
 
 Run mds on preddist
 ```{r mds1}
+set.seed(123)
 predNMDS <- metaMDS(preddist, k = 2, trymax = 100, trace = FALSE) 
 # Check
 predNMDS # Works - Stress 0.15
@@ -147,7 +149,7 @@ species.scores <- as.data.frame(scores(predNMDS, "species"))  # Using the scores
 But we can run the mds again on predmatrix rather than preddist as long as autotransform is turned off:
 
 ```{r}
-set.seed(2)
+set.seed(456)
 predNMDS <- metaMDS(predmatrix, k = 2, trymax = 100, trace = FALSE, autotransform = FALSE, distance="bray")
 ```
 
@@ -191,27 +193,38 @@ And need to make separate columns with 'coords' for the labels, so that they dod
 6. S qen 
 
 ```{r}
-#             1      2       3       4       5        6
-Coord_1 <- c(-2.6,	-4.2,	  -1.8,	  -2.6,	   1.1,	   -6.5)
-Coord_2 <- c(-0.2,	0.2,	   1.1,	   0.5,	  -0.2,	   -0.7)
-
-
 species.labels <- species.scores %>% 
-  mutate(Coord_1 = Coord_1,
-         Coord_2 = Coord_2)
-
+  mutate(label = factor(c(2, 4, 5, 1, 6, 3))) %>% 
+  arrange(label)
+species.labels
 ```
+
+
+
+```{r}
+Coord_1 <- c(-1.55,	-1.5,	  -6.2,	  -3,	   -1.2,   -0.5)
+Coord_2 <- c(0.4,	 -0.3,	 -0.5,    0.3,	  0.8,	 -0.2)
+```
+
+
+
+```{r}
+species.labels <- species.labels %>% 
+ mutate(coord_1 = Coord_1,
+         coord_2 = Coord_2)
+```
+
 
 ## Site scores
 ```{r}
-data.scores <- as.data.frame(scores(predNMDS))  # Scores function from vegan extracts the site scores -> data.frame
+data.scores <- predNMDS$points %>%   # Scores function from vegan extracts the site scores -> data.frame
+  as.data.frame()
+
 data.scores$TID <- rownames(data.scores)  # create a column of site names, from the rownames of data.scores
 data.scores$grp <- env$Reeftype  #  going to want to group by reef type
 
 shannon <- env %>% 
   dplyr::select("TID", "Shannon")
-
-
 
 data.scores <- data.scores %>% 
   full_join(shannon, by = "TID")
@@ -225,18 +238,17 @@ pred_nmds_plot <-
   ggplot(data.scores, aes(NMDS1, NMDS2)) + # Each individual TID score in NMDS space
   geom_point(aes(colour = grp, shape = grp), alpha=0.6, position=position_jitter(.1)) +  # grouping by reef type (grp)
   geom_point(aes(colour = grp, shape = grp), alpha=0.6, position=position_jitter(.1)) +  # or could even include scale by Shannon score
-  xlim(-10, 3)+
+  xlim(-11, 3)+
   ylim(-3, 3)+
   scale_color_manual(values=c("#DFC27D", "#436EEE", "#35978F"))+ # The classic Kimbe colour scheme
   scale_fill_manual(values=c("#DFC27D", "#436EEE", "#35978F"))+ # The classic Kimbe colour scheme
   scale_shape_manual(values=c(16, 8, 17))+                       # and classic Kimbe pch scheme
   stat_ellipse(geom = "polygon", aes(colour = grp, fill = grp), alpha=0.1, type='t',size =0.8) +          # 95% conf ellipses
   stat_ellipse(aes(colour = grp), alpha=1, type='t',size =0.8) +          # 95% conf ellipses
-  #geom_point(data = species.scores, aes(NMDS1, NMDS2), pch = 15, size = 2,
-   #          position=position_jitter(0.1)) +                    # Pts for Spp scores for top 6 taxa
-  geom_text(data = species.labels, aes(Coord_1*1.05, Coord_2, label = species), size = 4, fontface = "italic") + # Text for these           
-  geom_segment(data = species.scores, aes(x = 0, y = 0, xend = NMDS1, yend = NMDS2),                # And arrows
-               arrow = arrow(length = unit(0.2, 'cm')), colour = "black", alpha=0.6)+
+  #geom_point(data = species.scores, aes(NMDS1, NMDS2), pch = 15, size = 2, position=position_jitter(0.1)) + # Pts for Spp scores for top 6 taxa
+  geom_text(data = species.labels, aes(coord_1, coord_2, label = label), size = 5, fontface = "italic", ) + # Text for these           
+  geom_segment(data = species.scores, aes(x = 0, y = 0, xend = NMDS1, yend = NMDS2),              # And arrows
+               arrow = arrow(length = unit(0.2, 'cm'), type = "closed"), colour = "black", arrow.fill = "black", alpha = 0.8) +
   #geom_text(aes(label = TID), size = 2)+  
   geom_hline(yintercept = 0, linetype=2, alpha=0.3) +     # 0 on y axis
   geom_vline(xintercept = 0, linetype=2, alpha=0.3) +     # 0 on x axis
@@ -255,8 +267,8 @@ pred_nmds_plot <-
 
 pred_nmds_plot
 
-ggsave(pred_nmds_plot, filename= '../../output/rfigures/prednmds2.pdf',  width = 174, height = 109, units = "mm", dpi = 600)
-ggsave(pred_nmds_plot, filename= '../../output/rfigures/prednmds.svg',  device = 'svg' , width = 174, height = 109, units = "mm", dpi = 600)
+#ggsave(pred_nmds_plot, filename= '../../output/rfigures/prednmds2.pdf',  width = 174, height = 109, units = "mm", dpi = 600)
+ggsave(pred_nmds_plot, filename= '../../output/rfigures/prednmds.svg',  device = 'svg' , width = 105, height = 66, units = "mm", dpi = 600)
 
 ```
 
@@ -269,6 +281,10 @@ ggsave(pred_nmds_plot, filename= '../../output/rfigures/prednmds.svg',  device =
 
 ### DECISION -> Join venn and nmds in inkscape
 
+#
+
+
+
 ```{r}
 nmdsvenn <- 
 pred_nmds_plot + 
@@ -280,13 +296,13 @@ pred_nmds_plot +
   coord_cartesian(xlim = c(-11, 3), clip = "off") +
   annotation_custom(
     ggplotGrob(predvenn), 
-    xmin = -17, xmax =0.5, ymin = -1, ymax = 3)
+    xmin = -18.5, xmax =0.5, ymin = -1, ymax = 3)
 
 nmdsvenn
-
+predvenn
 
 ggsave(nmdsvenn, filename= '../../output/rfigures/nmdsvenn.png',  width = 174, height = 109, units = "mm", dpi = 1000 ) # 174mm the required width for Coral Reefs. Max height = 234mm
-ggsave(nmdsvenn, filename= '../../output/rfigures/nmdsvenn2.pdf',  width = 174, height = 109, units = "mm", dpi = 1000 )
+ggsave(nmdsvenn, filename= '../../output/rfigures/nmdsvenn.svg',  width = 105, height = 66, units = "mm", dpi = 600 )
 
 
 ```

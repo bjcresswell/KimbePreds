@@ -9,7 +9,7 @@
 graphics.off()
 library(readxl)
 library(tidyverse)
-library(artyfarty)
+#library(artyfarty)
 getwd()
 setwd("~/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/code/PredBiomass")
 

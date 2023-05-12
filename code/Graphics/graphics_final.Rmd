@@ -39,10 +39,6 @@ library(patchwork)
 library(tidyverse)
 ```
 
-Notes on aesthetics for Coral Reefs
-
-
-
 
 
 # Abundance
@@ -307,7 +303,7 @@ mainfig1
 ggsave(mainfig1, filename= '../../output/rfigures/main_fig_hires.tiff',  width = 174, height = 107, units = "mm", dpi = 600)
 
 # Small size
-ggsave(mainfig1, filename= '../../output/rfigures/main_fig_lowres.png',  width = 160, height = 100, units = "mm", dpi = 300)
+ggsave(mainfig1, filename= '../../output/rfigures/main_fig.tiff',  width = 105, height = 120, units = "mm", dpi = 300)
 
 
 ```

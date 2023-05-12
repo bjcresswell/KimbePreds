@@ -8,6 +8,7 @@ getwd()
 
 
 # Packages
+library(plyr)
 library(VennDiagram)
 #library(plyr)
 library(tidyverse)
@@ -17,7 +18,7 @@ library(ggvenn)
 # Data
 # Need to start with the preds data (has the a column for reef type as well as taxa)
 #rm(list=ls())
-load(file='../../data/preds.RData')
+load(file='data/preds.RData')
 
 # How many species total?
 totalpredspp <- preds %>% 
@@ -61,7 +62,7 @@ commontaxa <- merge(NO[1],P[1], by="Taxa") %>% # Just 6 spp in common between al
 #write_xlsx(commontaxa, "../../output/rtables/commontaxa.xlsx")
 
 # Df with all taxa and presence vs absence
-alltaxa <- tibble(join_all(list(totalpredspp, P[-2], N[-2], O[-2]), by="Taxa")) %>%
+alltaxa <- tibble(plyr::join_all(list(totalpredspp, P[-2], N[-2], O[-2]), by="Taxa")) %>%
   replace(is.na(.), "Absent")
 
 #write_xlsx(alltaxa, "../../output/rtables/taxa_presence_absence.xlsx")
@@ -116,13 +117,13 @@ predvenn <- ggvenn(spp_list, show_percentage = FALSE,
        text_color = "black",
        set_name_size = 3,
        text_size = 3) + 
-  theme(panel.border = element_rect(size = 1, fill = "transparent")) +
+  theme(panel.border = element_rect(size = 1, fill = "transparent")) 
   annotate("text", x = -1.8, y = 2, label = "a")
   
 
 
-ggsave(predvenn, filename= '../../output/rfigures/predvenn2.svg', width=4,  height=4, dpi = 1000 ) # SVG is for Inkscape editing :(
-ggsave(predvenn, filename= '../../output/rfigures/predvenn2.png', width=4,  height=4, dpi = 1000 )
+ggsave(predvenn, filename= 'output/rfigures/predvenn.svg', width=40,  height=40, units = "mm", dpi = 300 ) # SVG is for Inkscape editing :(
+#ggsave(predvenn, filename= '../../output/rfigures/predvenn2.png', width=40,  height=40, units = "mm", dpi = 1000 )
 
 library(OpenImageR)
 
