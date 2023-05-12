@@ -46,13 +46,25 @@ library(tidyverse)
 
 Need the abun, biom and diversity differences across individual sites/reefs (in addition to reef types)
 
+```{r}
+theme_set(theme(axis.title.y = element_text(family="Arial", size=20, colour = 'black', vjust=0)))
+```
+
+
 
 # ABUNDANCE #
 
 ## Load abundance data
 ```{r abun-load, include=FALSE}
-source("../PredAbundance/pred_abun_diw.R", local = knitr::knit_global())
+#source("../PredAbundance/pred_abun_diw.R", local = knitr::knit_global())
 ```
+```{r}
+getwd()
+load(file='../../data/predsum.RData') # Save as RData file
+
+```
+
+
 
 ## Calculate summary stats for sites
 ```{r abun-sum-stats}
@@ -73,13 +85,15 @@ ggplot(aes(x=SiteCode, y=mean)) +
   geom_point(aes(shape = Reeftype, fill= Reeftype), colour="black", size = 4) +
   scale_shape_manual(values=c(24, 21, 22)) +                                                       # Kimbe pch scheme
   scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D")) +                        
-  scale_y_continuous(limits = c(0,280), "Mean predator count (±SE)") +                             # Need to specify y axis limits as it'll exclude 0 if you don't
+  scale_y_continuous(limits = c(0,280), "Mean predator\ncount (±SE)") +                             # Need to specify y axis limits as it'll exclude 0 if you don't
   scale_x_discrete("") +                                                                           # Don't need axis names until the bottom panel
   theme_classic() +
   theme(legend.position = "none") +
-  #theme(axis.text.x = element_blank()) +
-  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0)) +
-  theme(axis.text.y = element_text(family="Arial", size= 10, colour = 'black')) +
+  theme(axis.title.x = element_text(family="Arial", size=10, colour = 'black')) +
+  theme(axis.text.x = element_blank())+
+  #theme(axis.text.x = element_text(family="Arial", size=6, colour = 'black', angle = 45, vjust = 0.5)) +
+  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black')) +
+  theme(axis.text.y = element_text(family="Arial", size= 8, colour = 'black')) +
   theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent"))
 
 reefabunbar <- 
@@ -93,15 +107,17 @@ ggplot(aes(x=SiteCode, y=mean)) +
   scale_y_continuous(limits = c(0,50), name = NULL) +
   scale_x_discrete("") +                                                                           # Don't need axis names until the bottom panel
   theme_classic() +
-  theme(legend.position = c(0.8, 0.65)) +
+  theme(legend.position = c(0.8, 0.6)) +
   theme(legend.title=element_blank()) +
-  #theme(axis.text.x = element_blank()) +
-  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0)) +
-  theme(axis.text.y = element_text(family="Arial", size= 10, colour = 'black')) +
+  theme(axis.title.x = element_text(family="Arial", size=10, colour = 'black')) +
+  theme(axis.text.x = element_blank())+
+  #theme(axis.text.x = element_text(family="Arial", size=6, colour = 'black', angle = 45, vjust = 0.5)) +
+  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black')) +
+  theme(axis.text.y = element_text(family="Arial", size= 8, colour = 'black')) +
   theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent"))
 
 
-abunbar <- ggpubr::ggarrange(bradabunbar, reefabunbar, ncol = 2, widths = c(0.2, 1.1) )
+abunbar <- ggpubr::ggarrange(bradabunbar, reefabunbar, ncol = 2, widths = c(0.35, 1.1) )
 abunbar
 ```
 
@@ -110,7 +126,10 @@ abunbar
 # BIOMASS
 
 ```{r biom-load}
-source("../PredBiomass/pred_biom_diw.R", local = knitr::knit_global())
+#source("../PredBiomass/pred_biom_diw.R", local = knitr::knit_global())
+```
+```{r}
+load(file = "../../data/merpredsum.RData")
 ```
 
 
@@ -132,13 +151,15 @@ ggplot(aes(x=SiteCode, y=mean)) +
   geom_point(aes(shape = Reeftype, fill= Reeftype), colour="black", size = 4) +
   scale_shape_manual(values=c(24, 21, 22)) +                                                       # Kimbe pch scheme
   scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D")) +                        
-  scale_y_continuous(limits = c(0,750), "Mean predator biomass (kg ±SE)") +
+  scale_y_continuous(limits = c(0,750), "Mean predator\nbiomass (kg ±SE)") +
   scale_x_discrete("") +
   theme_classic() +
   theme(legend.position = "none") + # Don't need axis names until the bottom panel
-  #theme(axis.text.x = element_blank()) +
-  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0)) +
-  theme(axis.text.y = element_text(family="Arial", size= 10, colour = 'black')) +
+  theme(axis.title.x = element_text(family="Arial", size=10, colour = 'black')) +
+  theme(axis.text.x = element_blank())+
+  #theme(axis.text.x = element_text(family="Arial", size=6, colour = 'black', angle = 45, vjust = 0.5)) +
+  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black')) +
+  theme(axis.text.y = element_text(family="Arial", size= 8, colour = 'black')) +
   theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent"))
 
 
@@ -154,12 +175,14 @@ ggplot(aes(x=SiteCode, y=mean)) +
   scale_x_discrete("") +
   theme_classic() +
   theme(legend.position = "none") +
-  #theme(axis.text.x = element_blank()) +
-  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0)) +
-  theme(axis.text.y = element_text(family="Arial", size= 10, colour = 'black')) +
+  theme(axis.title.x = element_text(family="Arial", size=10, colour = 'black')) +
+  theme(axis.text.x = element_blank())+
+  #theme(axis.text.x = element_text(family="Arial", size=6, colour = 'black', angle = 45, vjust = 0.5)) +
+  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black')) +
+  theme(axis.text.y = element_text(family="Arial", size= 8, colour = 'black')) +
   theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent"))
 
-biombar <- ggpubr::ggarrange(bradbiombar, reefbiombar, ncol = 2, widths = c(0.2, 1.1) )
+biombar <- ggpubr::ggarrange(bradbiombar, reefbiombar, ncol = 2, widths = c(0.35, 1.1) )
 biombar
 ```
 
@@ -167,7 +190,11 @@ biombar
 # DIVERSITY
 
 ```{r div-load, warning=FALSE, include=FALSE, echo=TRUE}
-source("../PredDiversity/pred_div_diw.R", local = knitr::knit_global())
+#source("../PredDiversity/pred_div_diw.R", local = knitr::knit_global())
+```
+
+```{r}
+load(file='../../data/preddiv.RData')
 ```
 
 
@@ -195,13 +222,14 @@ ggplot(aes(x=SiteCode, y=mean)) +
   geom_point(aes(shape = Reeftype, fill= Reeftype), colour="black", size = 4) +
   scale_shape_manual(values=c(24, 21, 22)) +                                                       # Kimbe pch scheme
   scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D")) +                        
-  scale_y_continuous("Mean diversity (H ±SE)") +
+  scale_y_continuous("Mean predator\ndiversity (H ±SE)") +
   scale_x_discrete("Reef") +
   theme_classic() +
   theme(legend.position = "none") +
-  #theme(axis.text.x = element_blank()) +
-  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0)) +
-  theme(axis.text.y = element_text(family="Arial", size= 10, colour = 'black')) +
+  theme(axis.title.x = element_text(family="Arial", size=10, colour = 'black')) +
+  theme(axis.text.x = element_text(family="Arial", size=6, colour = 'black', angle = 45, vjust = 0.5)) +
+  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black')) +
+  theme(axis.text.y = element_text(family="Arial", size= 8, colour = 'black')) +
   theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent"))
 reefdivbar
 ```
@@ -214,8 +242,12 @@ reefdivbar
 ```{r all-plot, fig.height=8.5,  fig.width=8.5}
 reefbars <- ggpubr::ggarrange(abunbar, biombar, reefdivbar, ncol = 1)
 reefbars
-ggsave(reefbars, filename= '../../output/rfigures/SI_reefbars.tiff',  width = 174, height = 174, units = "mm", dpi = 600)
-ggsave(reefbars, filename= '../../output/rfigures/SI_reefbars.png',  width = 174, height = 174, units = "mm", dpi = 600)
+
+
+#abunbar / biombar / reefdivbar
+
+ggsave(reefbars, filename= '../../output/rfigures/SI_reefbars.tiff',   width = 105, height = 120, units = "mm", dpi = 300)
+#ggsave(reefbars, filename= '../../output/rfigures/SI_reefbars.png',  width = 174, height = 174, units = "mm", dpi = 600)
 ```
 
 
