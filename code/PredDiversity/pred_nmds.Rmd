@@ -37,6 +37,7 @@ getwd()
 ```{r housekeep}
 #rm(list=ls())
 graphics.off()
+theme_set(theme_classic(base_family = "Helvetica", base_size = 9)) 
 ```
 
 
@@ -55,6 +56,7 @@ library(tidyverse)
 ## Load
 Start with predator diversity df - preddiv
 ```{r data-load}
+getwd()
 load(file='../../data/preddiv.RData')
 ```
 
@@ -128,10 +130,12 @@ pred.plot<-cbind(predmatrix, NMDS1, NMDS2) %>%
 
 ### And plot
 ```{r mds-plot1}
+theme_set(theme_classic(base_family = "Helvetica", base_size = 5))
+
 ggplot(pred.plot, aes(NMDS1, NMDS2, color=Reeftype))+
   geom_point(position=position_jitter(.1), shape=3)+##separates overlapping points
   #geom_text(aes(label = TID))+
-  stat_ellipse(type='t',size =1)+ ##draws 95% confidence interval ellipses
+  stat_ellipse(type='t',size =1)#+ ##draws 95% confidence interval ellipses
   theme_minimal()
 
 ```
@@ -194,7 +198,8 @@ And need to make separate columns with 'coords' for the labels, so that they dod
 
 ```{r}
 species.labels <- species.scores %>% 
-  mutate(label = factor(c(2, 4, 5, 1, 6, 3))) %>% 
+  mutate(label = factor(c(2, 4, 5, 1, 6, 3)),
+         label2 = factor(c("C.m", "C.s", "L.g", "M.m", "C.c", "S.q"))) %>% 
   arrange(label)
 species.labels
 ```
@@ -234,6 +239,17 @@ head(data.scores)  #look at the data
 # Plot
 
 ```{r}
+
+```
+
+
+
+
+
+
+
+
+```{r fig.height = 65/25.4, fig.width = 105/25.4}
 pred_nmds_plot <-
   ggplot(data.scores, aes(NMDS1, NMDS2)) + # Each individual TID score in NMDS space
   geom_point(aes(colour = grp, shape = grp), alpha=0.6, position=position_jitter(.1)) +  # grouping by reef type (grp)
@@ -246,29 +262,32 @@ pred_nmds_plot <-
   stat_ellipse(geom = "polygon", aes(colour = grp, fill = grp), alpha=0.1, type='t',size =0.8) +          # 95% conf ellipses
   stat_ellipse(aes(colour = grp), alpha=1, type='t',size =0.8) +          # 95% conf ellipses
   #geom_point(data = species.scores, aes(NMDS1, NMDS2), pch = 15, size = 2, position=position_jitter(0.1)) + # Pts for Spp scores for top 6 taxa
-  geom_text(data = species.labels, aes(coord_1, coord_2, label = label), size = 5, fontface = "italic", ) + # Text for these           
+  geom_text(data = species.labels, aes(coord_1, coord_2, label = label2), size = 4, fontface = "italic", ) + # Text for these           
   geom_segment(data = species.scores, aes(x = 0, y = 0, xend = NMDS1, yend = NMDS2),              # And arrows
-               arrow = arrow(length = unit(0.2, 'cm'), type = "closed"), colour = "black", arrow.fill = "black", alpha = 0.8) +
+               arrow = arrow(length = unit(0.2, 'cm'), type = "closed"), colour = "grey30", arrow.fill = "grey30", alpha = 0.8) +
   #geom_text(aes(label = TID), size = 2)+  
   geom_hline(yintercept = 0, linetype=2, alpha=0.3) +     # 0 on y axis
   geom_vline(xintercept = 0, linetype=2, alpha=0.3) +     # 0 on x axis
-  theme_classic()+                        # White fill
+ # theme_classic()+                        # White fill
   theme(
     axis.line = element_blank(), 
+    axis.text = element_text(family = "Helvetica", size = 9),
+    axis.title = element_text(family = "Helvetica", size = 9),
     panel.border = element_rect(size = 1, fill = "transparent"),
     legend.title = element_blank(),
-    legend.text = element_text(face = "plain", size = 10),
-    legend.position = c(.1,.13),
+    legend.text = element_text(family = "Helvetica", size = 9),
+    legend.position = c(.14,.14),
     legend.background = element_rect(fill = "transparent"),
     legend.box.background = element_rect(fill = 'transparent', colour = "black"),
     legend.spacing.y = unit(0.1, "mm"),
     legend.key.size = unit(1, "mm")
     )
 
+
 pred_nmds_plot
 
-#ggsave(pred_nmds_plot, filename= '../../output/rfigures/prednmds2.pdf',  width = 174, height = 109, units = "mm", dpi = 600)
-ggsave(pred_nmds_plot, filename= '../../output/rfigures/prednmds.svg',  device = 'svg' , width = 105, height = 66, units = "mm", dpi = 600)
+ggsave(pred_nmds_plot, filename= '../../output/rfigures/prednmds3.pdf',  width = 105, height = 65, units = "mm", dpi = 300)
+#ggsave(pred_nmds_plot, filename= '../../output/rfigures/prednmds.svg',  device = 'svg' , width = 105, height = 66, units = "mm", dpi = 600)
 
 ```
 
@@ -285,7 +304,7 @@ ggsave(pred_nmds_plot, filename= '../../output/rfigures/prednmds.svg',  device =
 
 
 
-```{r}
+```{r fig.width = 168, fig.height=105, fig.dim=, fig}
 nmdsvenn <- 
 pred_nmds_plot + 
   #xlim(-20, 3)+
@@ -296,23 +315,21 @@ pred_nmds_plot +
   coord_cartesian(xlim = c(-11, 3), clip = "off") +
   annotation_custom(
     ggplotGrob(predvenn), 
-    xmin = -18.5, xmax =0.5, ymin = -1, ymax = 3)
+    xmin = -18.5, xmax =0.5, ymin = -1, ymax = 3.4)
 
 nmdsvenn
 predvenn
 
 ggsave(nmdsvenn, filename= '../../output/rfigures/nmdsvenn.png',  width = 174, height = 109, units = "mm", dpi = 1000 ) # 174mm the required width for Coral Reefs. Max height = 234mm
 ggsave(nmdsvenn, filename= '../../output/rfigures/nmdsvenn.svg',  width = 105, height = 66, units = "mm", dpi = 600 )
+ggsave(nmdsvenn, filename= '../../output/rfigures/nmdsvenn.pdf',  width = 105, height = 66, units = "mm", dpi = 600 )
 
 
 ```
 
 
 ```{r}
-
-
-
-
+# END #
 ```
 
 

@@ -58,6 +58,7 @@ theme_set(theme(axis.title.y = element_text(family="Arial", size=20, colour = 'b
 ```{r abun-load, include=FALSE}
 #source("../PredAbundance/pred_abun_diw.R", local = knitr::knit_global())
 ```
+
 ```{r}
 getwd()
 load(file='../../data/predsum.RData') # Save as RData file
@@ -246,7 +247,7 @@ reefbars
 
 #abunbar / biombar / reefdivbar
 
-ggsave(reefbars, filename= '../../output/rfigures/SI_reefbars.tiff',   width = 105, height = 120, units = "mm", dpi = 300)
+ggsave(reefbars, filename= '../../output/rfigures/SI_reefbars.pdf', device = cairo_pdf, width = 105, height = 120, units = "mm", dpi = 300)
 #ggsave(reefbars, filename= '../../output/rfigures/SI_reefbars.png',  width = 174, height = 174, units = "mm", dpi = 600)
 ```
 

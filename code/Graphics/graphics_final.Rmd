@@ -8,8 +8,8 @@ output:
     collapse: no
     df_print: paged
     fig_caption: yes
-    fig_height: 4
-    fig_width: 4
+    #fig_asp: 1.6
+    #fig_width: 105/25.4
     highlight: textmate
     theme: spacelab
     toc: yes
@@ -21,7 +21,7 @@ editor_options:
 Last edit 23 July 2022 BJC
 
 ```{r setup, include=TRUE, warnings=FALSE, message=FALSE}
-knitr::opts_chunk$set(root.dir = "~/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/", echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, fig.width = ggplot2::unit(120/25.4,"in"), fig.height = ggplot2::unit(75/25.4,"in"))
 #rm(list=ls())
 getwd()
 ```
@@ -37,7 +37,9 @@ library(sjPlot)
 library(cowplot)
 library(patchwork)
 library(tidyverse)
+getwd()
 ```
+
 
 
 
@@ -64,7 +66,7 @@ abunplotdata %>%
 # Create emmeans figure
 abunplotresults <- 
   ggplot(abunplotdata, aes(y=Mean,  x=Reeftype)) +
-  ylab('Abundance (n)\n')+
+  ylab('Abundance\n(n)')+
   xlab(NULL)+
   geom_linerange(aes(ymin = MeanLowerCI95, ymax = MeanUpperCI95),  size = 0.5)+
   geom_point(aes(shape = Reeftype, fill= Reeftype), colour="black", size = 4)+
@@ -73,10 +75,10 @@ abunplotresults <-
   theme_classic()+
   theme(legend.position = "none")+
   theme(axis.text.x = element_blank())+
-  #theme(axis.title.x = element_text(family="Arial", size=10, colour = 'black', vjust = -0.5))+
-  #theme(axis.text.x = element_text(family="Arial", size= 10, colour = 'black', angle=0, vjust = 0))+
-  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0))+
-  theme(axis.text.y = element_text(family="Arial", size= 10, colour = 'black'))+
+  #theme(axis.title.x = element_text(family="Helvetica", size=10, colour = 'black', vjust = -0.5))+
+  #theme(axis.text.x = element_text(family="Helvetica", size= 10, colour = 'black', angle=0, vjust = 0))+
+  theme(axis.title.y = element_text(family="Helvetica", size=10, colour = 'black', vjust=2))+
+  theme(axis.text.y = element_text(family="Helvetica", size= 10, colour = 'black'))+
   theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent")) +
   annotate("text", x = 0.6, y = 23, label = "a")
 
@@ -94,10 +96,10 @@ abunplotcontrasts <-
   theme_classic()+
   theme(axis.text.x = element_blank())+
   theme(axis.title.x = element_blank())+
-  #theme(axis.title.x = element_text(family="Arial", size=10, colour = 'black', vjust = -0.5))+
-  #theme(axis.text.x = element_text(family="Arial", size= 10, colour = 'black', angle=0, vjust = 0))+
-  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0))+
-  theme(axis.text.y = element_text(family="Arial", size= 10, colour = 'black'))+
+  #theme(axis.title.x = element_text(family="Helvetica", size=10, colour = 'black', vjust = -0.5))+
+  #theme(axis.text.x = element_text(family="Helvetica", size= 10, colour = 'black', angle=0, vjust = 0))+
+  theme(axis.title.y = element_text(family="Helvetica", size=10, colour = 'black', vjust=0))+
+  theme(axis.text.y = element_text(family="Helvetica", size= 10, colour = 'black'))+
   theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent")) +
   annotate("text", x = 3.4, y = 20, label = "d")
 
@@ -141,7 +143,7 @@ biomplotdata %>%
 # Create emmeans figure
 biomplotresults <- 
   ggplot(biomplotdata, aes(y=Mean,  x=Reeftype)) +
-  ylab('Biomass (kg)\n')+
+  ylab('Biomass\n(kg)')+
   xlab(NULL)+
   geom_linerange(aes(ymin = MeanLowerCI95, ymax = MeanUpperCI95),  size = 0.5)+
   geom_point(aes(shape = Reeftype, fill= Reeftype), colour="black", size = 4)+
@@ -150,10 +152,10 @@ biomplotresults <-
   theme_classic()+
   theme(legend.position = "none")+
   theme(axis.text.x = element_blank())+
-  #theme(axis.title.x = element_text(family="Arial", size=10, colour = 'black', vjust = -0.5))+
-  #theme(axis.text.x = element_text(family="Arial", size= 10, colour = 'black', angle=0, vjust = 0))+
-  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0))+
-  theme(axis.text.y = element_text(family="Arial", size= 10, colour = 'black'))+
+  #theme(axis.title.x = element_text(family="Helvetica", size=10, colour = 'black', vjust = -0.5))+
+  #theme(axis.text.x = element_text(family="Helvetica", size= 10, colour = 'black', angle=0, vjust = 0))+
+  theme(axis.title.y = element_text(family="Helvetica", size=10, colour = 'black', vjust=2))+
+  theme(axis.text.y = element_text(family="Helvetica", size= 10, colour = 'black'))+
   theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent")) +
   annotate("text", x = 0.6, y = 34, label = "b")
 
@@ -169,10 +171,10 @@ biomplotcontrasts <-
   xlab(NULL)+
   theme_classic()+
   theme(axis.text.x = element_blank())+
-  #theme(axis.title.x = element_text(family="Arial", size=10, colour = 'black', vjust = -0.5))+
-  #theme(axis.text.x = element_text(family="Arial", size= 10, colour = 'black', angle=0, vjust = 0))+
-  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0))+
-  theme(axis.text.y = element_text(family="Arial", size= 10, colour = 'black'))+
+  #theme(axis.title.x = element_text(family="Helvetica", size=10, colour = 'black', vjust = -0.5))+
+  #theme(axis.text.x = element_text(family="Helvetica", size= 10, colour = 'black', angle=0, vjust = 0))+
+  theme(axis.title.y = element_text(family="Helvetica", size=10, colour = 'black', vjust=0))+
+  theme(axis.text.y = element_text(family="Helvetica", size= 10, colour = 'black'))+
   theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent")) +
   annotate("text", x = 3.4, y = 30, label = "e")
 ```
@@ -218,7 +220,7 @@ shanplotdata %>%
 # Create emmeans figure
 shanplotresults <- 
   ggplot(shanplotdata, aes(y=Mean,  x=Reeftype)) +
-  ylab('Diversity (H)\n')+
+  ylab('Diversity\n(H)')+
   xlab('Reef type')+
   geom_linerange(aes(ymin = MeanLowerCI95, ymax = MeanUpperCI95),  size = 0.5)+
   geom_point(aes(shape = Reeftype, fill= Reeftype), colour="black", size = 4)+
@@ -227,10 +229,10 @@ shanplotresults <-
   theme_classic()+
   theme(legend.position = "none")+
   #theme(axis.text.x = element_blank())+
-  theme(axis.title.x = element_text(family="Arial", size=10, colour = 'black', vjust = -0.5))+
-  theme(axis.text.x = element_text(family="Arial", size= 10, colour = 'black', angle=0, vjust = 0))+
-  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0))+
-  theme(axis.text.y = element_text(family="Arial", size= 10, colour = 'black'))+
+  theme(axis.title.x = element_text(family="Helvetica", size=10, colour = 'black', vjust = -0.5))+
+  theme(axis.text.x = element_text(family="Helvetica", size= 10, colour = 'black', angle=0, vjust = 0))+
+  theme(axis.title.y = element_text(family="Helvetica", size=10, colour = 'black', vjust=2))+
+  theme(axis.text.y = element_text(family="Helvetica", size= 10, colour = 'black'))+
   theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent")) +
   annotate("text", x = 0.6, y = 1.4, label = "c")
 
@@ -246,10 +248,10 @@ shanplotcontrasts <-
   xlab('Contrasts')+
   theme_classic()+
   theme(axis.text.x = element_blank())+
-  theme(axis.title.x = element_text(family="Arial", size=10, colour = 'black', vjust = -0.5))+
-  theme(axis.text.x = element_text(family="Arial", size= 10, colour = 'black', angle=0, vjust = 0))+
-  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust=0))+
-  theme(axis.text.y = element_text(family="Arial", size= 10, colour = 'black'))+
+  theme(axis.title.x = element_text(family="Helvetica", size=10, colour = 'black', vjust = -0.5))+
+  theme(axis.text.x = element_text(family="Helvetica", size= 10, colour = 'black', angle=0, vjust = 0))+
+  theme(axis.title.y = element_text(family="Helvetica", size=10, colour = 'black', vjust=0))+
+  theme(axis.text.y = element_text(family="Helvetica", size= 10, colour = 'black'))+
   theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent")) +
   annotate("text", x = 3.4, y = 1.25, label = "f")
 ```
@@ -269,7 +271,7 @@ ggsave(shanfig, filename= '../../output/rfigures/shan_fig.png', width=7,  height
 
 
 # Combined  figure - hacky hacky and more hacky
-```{r graph-combined, fig.height=5, fig.width=, warning=FALSE}
+```{r graph-combined, warning=FALSE, fig.width=105/25.4, fig.height=85/25.4}
 # Using ggarrange from ggpubr
 #mainfig <-   ggarrange(abunfig, biomfig, shanfig, nrow =3)
 # Doesn't align very well, as it squashes in axes where there are decimal points that make the numbers wider
@@ -285,8 +287,8 @@ right.panel <-
   abunplotdata %>%
   filter(Reeftype == 'P') %>% 
   ggplot() +
-  ylab("Contrast effect size estimate\n") +
-  theme(axis.title.y = element_text(family="Arial", size=10, colour = 'black', vjust = 10))
+  ylab("Contrast effect size estimate\n\n") +
+  theme(axis.title.y = element_text(family="Helvetica", size=10, colour = 'black', hjust = 0.6))
 
 
 mainfig1 <-
@@ -298,12 +300,16 @@ mainfig1
 ```
 
 # Save
-```{r graph-combined, fig.height = 5, fig.width = 8}
-# Large size
-ggsave(mainfig1, filename= '../../output/rfigures/main_fig_hires.tiff',  width = 174, height = 107, units = "mm", dpi = 600)
+```{r save-graph-combined}
+# Large size - tiff
+#ggsave(mainfig1, filename= '../../output/rfigures/main_fig_hires.tiff',  width = 120, height = 75, units = "mm", dpi = 600)
+# Small size - tiff
+#ggsave(mainfig1, filename= '../../output/rfigures/main_fig.tiff',  width = 105, height = 120, units = "mm", dpi = 300)
 
-# Small size
-ggsave(mainfig1, filename= '../../output/rfigures/main_fig.tiff',  width = 105, height = 120, units = "mm", dpi = 300)
+# MEPS
+ggsave(mainfig1, filename= '../../output/rfigures/main_fig.svg', device = "svg", width = 120, height = 80, units = "mm", dpi = 300)
+ggsave(mainfig1, filename= '../../output/rfigures/main_fig2.pdf', device = cairo_pdf, width = 105, height = 85, units = "mm", dpi = 300)
+
 
 
 ```

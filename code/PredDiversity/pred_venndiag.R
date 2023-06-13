@@ -3,7 +3,7 @@
 # Last edit 9 Sept 2021
 
 # Setwd
-setwd("/Users/bjcresswell/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/code/PredDiversity")
+#setwd("/Users/bjcresswell/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/code/PredDiversity")
 getwd()
 
 
@@ -108,22 +108,24 @@ spp_list <- list(`Pinnacle (53)` = factor(P$Taxa),
 
 predvenn <- ggvenn(spp_list, show_percentage = FALSE, 
        fill_color = c("#35978F", "#DFC27D", "#436EEE"),
-       fill_alpha = 0.9,
+       fill_alpha = 0.5,
        stroke_color = "black",
        stroke_alpha = 1,
        stroke_size = 0.6,
        stroke_linetype = "solid",
        set_name_color = "black",
+#       set_name_color = "white",
        text_color = "black",
        set_name_size = 3,
        text_size = 3) + 
-  theme(panel.border = element_rect(size = 1, fill = "transparent")) 
-  annotate("text", x = -1.8, y = 2, label = "a")
-  
+  theme(panel.border = element_rect(size = 1, fill = "transparent", color = "transparent"), 
+        panel.background = element_rect(size = 1, fill = "white", color = "transparent"))
 
+predvenn
 
-ggsave(predvenn, filename= 'output/rfigures/predvenn.svg', width=40,  height=40, units = "mm", dpi = 300 ) # SVG is for Inkscape editing :(
+#ggsave(predvenn, filename= 'output/rfigures/predvenn.svg', width=40,  height=40, units = "mm", dpi = 300 ) # SVG is for Inkscape editing :(
 #ggsave(predvenn, filename= '../../output/rfigures/predvenn2.png', width=40,  height=40, units = "mm", dpi = 1000 )
+ggsave(predvenn, filename= 'output/rfigures/predvenn.pdf', width=40,  height=40, units = "mm", dpi = 300 ) 
 
 library(OpenImageR)
 

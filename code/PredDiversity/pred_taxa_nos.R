@@ -16,7 +16,8 @@
 # Also used to create abundance by family bar graphs - not sure if it should be this or top 10 pred spp? Ask Gem.
 
 # Housekeeping
-setwd("/Users/bjcresswell/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/code/PredDiversity")
+getwd()
+setwd("/Users/jc504838/Library/CloudStorage/OneDrive-JamesCookUniversity/Ben PhD/Data & analysis/KimbePreds/code/PredDiversity")
 #rm(list=ls())
 
 library(writexl)
@@ -163,7 +164,7 @@ RTtable <-
   mutate_if(is.numeric, round, 2)                               # rounds everything off
 
 ## And save
-write_csv(x = RTtable, file = 'output/rtables/SItable_alltaxa.csv')
+#write_csv(x = RTtable, file = 'output/rtables/SItable_alltaxa.csv')
  
 
 # The above is for all preds - can merge  with the LRT and P values from the multivariate abundance analysis to pull out 6 taxa driving differences - used for Fig 4.
@@ -181,6 +182,18 @@ RTsig
 # And reorder based on abundance
 RTsig$Taxa <- reorder(RTsig$Taxa, -RTsig$sum)
 
+# Shorten spp names and reef type for plotting
+
+library(fuzzySim)
+
+RTsig <- RTsig %>% 
+  mutate(Taxa = spCodes(Taxa, nchar.gen = 1, nchar.sp = 20, nchar.ssp = 0, sep.spcode = ". "),
+         Reeftype = dplyr::recode(Reeftype,
+                                  `Pinnacle` = 'P',
+                                  `Offshore` = 'O',
+                                  `Nearshore` = 'N'))
+
+
 
 # Plot
 
@@ -190,22 +203,22 @@ theme_set(theme_cowplot())
 
 sigtaxaplot <- 
 ggplot(data=RTsig, aes(x=Reeftype, y=mean, fill=Reeftype))+
-  geom_linerange(aes(ymin=mean-se, ymax=mean+se), width=.2)+ # The width argument is if you want to use geom_errorbar
-  geom_point(aes(shape = Reeftype),stat="identity", colour="black", size = 5)+
+  geom_linerange(aes(ymin=mean-se, ymax=mean+se), linewidth = 0.5)+ # The width argument is if you want to use geom_errorbar
+  geom_point(aes(shape = Reeftype),stat="identity", colour="black", size = 3)+
   scale_shape_manual(values=c(24, 21, 22))+                       # had to adapt Kimbe pch scheme
   scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D"))+
   theme_classic()+
   theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent")) +
   facet_wrap(~factor(Taxa), scales = 'free', ncol = 3) +
-  ylab('Mean predator fish species abundance (±SE)')+
+  ylab('Mean species abundance (±SE)')+
   xlab('')+
   #geom_text(aes( label = mean, y = mean ), vjust = 1.5, size = 3, color = "white" )+
-  theme(axis.title.y = element_text(family="Helvetica", size=10, colour = 'black', vjust = 1.8),
-        axis.text = element_text(family="Helvetica", size= 9, colour = 'black'))+
-  theme(strip.text.x = element_text(family="Helvetica", face = "italic", size = 10, color = "black", hjust = -0.02))+
+  theme(axis.title.y = element_text(family="Helvetica", size=8, colour = 'black', vjust = 1.8),
+        axis.text = element_text(family="Helvetica", size= 8, colour = 'black'))+
+  theme(strip.text.x = element_text(family="Helvetica", face = "italic", size = 8, color = "black", hjust = -0.02))+
   theme(strip.background = element_rect(color="white", size=1.5, linetype="solid"))+
   theme(legend.position = 'none')+
-  guides(colour = FALSE, fill = FALSE, shape = FALSE)#+  
+  guides(colour = "none", fill = "none", shape = "none")#+  
   #theme_cowplot()
   
   
@@ -214,8 +227,9 @@ sigtaxaplot
 
 
 # Save
-# Coral reefs dims: Width max: 174mm Height max; 234mm
-ggsave(sigtaxaplot, filename= '../../output/rfigures/sigtaxaplot_box.png', width = 174, height = 100, units = "mm", dpi = 1000 )
+# MEPS dims: Width mid size 105mm , large size 169mm
+#ggsave(sigtaxaplot, filename= '../../output/rfigures/sigtaxaplot2.pdf', width = 165, height = 100, units = "mm", dpi = 300 )
+ggsave(sigtaxaplot, filename= '../../output/rfigures/sigtaxaplot3.pdf', width = 105, height = 70, units = "mm", dpi = 300 )
 
 
 
