@@ -46,7 +46,7 @@ getwd()
 # Abundance
 ```{r abun-plot-data}
 # Load data
-load("../../data/abunplotdata.RData")
+load("data/abunplotdata.RData")
 
 # Tweak labels so figure looks nice
 abunplotdata <- 
@@ -62,13 +62,13 @@ abunplotdata %>%
 ```
 
 
-```{r abun-plot-make}
+```{r abun-plot-make, fig.width=70/25.4, fig.height=70/25.4}
 # Create emmeans figure
 abunplotresults <- 
   ggplot(abunplotdata, aes(y=Mean,  x=Reeftype)) +
   ylab('Abundance\n(n)')+
   xlab(NULL)+
-  geom_linerange(aes(ymin = MeanLowerCI95, ymax = MeanUpperCI95),  size = 0.5)+
+  geom_linerange(aes(ymin = MeanLowerCI95, ymax = MeanUpperCI95),  linewidth = 0.5)+
   geom_point(aes(shape = Reeftype, fill= Reeftype), colour="black", size = 4)+
   scale_shape_manual(values=c(24, 21, 22))+                       # had to adapt Kimbe pch scheme
   scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D"))+
@@ -107,7 +107,7 @@ abunplotcontrasts
 ```
 
 # Plot together
-```{r abun-plot-patch}
+```{r abun-plot-patch, fig.width = 120/25.4, fig.height = 70/25.4}
 # Patchwork
 (abunfig <- abunplotresults + abunplotcontrasts)
 ```

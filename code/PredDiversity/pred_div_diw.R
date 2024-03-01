@@ -8,8 +8,8 @@
 # 2. Diversity metrics dataframe (with Spp richness and Shannon-Weiner H scores)
 
 # Housekeeping
-getwd()
-setwd("~/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/code/PredDiversity") # Have to specify this so that the script works embedded within the Rmd
+#getwd()
+#setwd("~/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/code/PredDiversity") # Have to specify this so that the script works embedded within the Rmd
 #rm(list=ls())
 
 
@@ -21,8 +21,8 @@ library(tidyverse)
 
 
 # Import raw predator and fish data 
-load('../../data/preds.RData')
-load('../../data/fish.RData')
+load('data/preds.RData')
+load('data/fish.RData')
 
 # Examine
 head(preds)
@@ -153,5 +153,5 @@ ggplot(data=subset(preddiv, Reeftype=='Nearshore'), aes(x=Shannon)) +
 
 
 # Save for use in eda and modeling
-save(preddiv, file='../../data/preddiv.RData')
-load(file='../../data/preddiv.RData')
+save(preddiv, file='data/preddiv.RData')
+load(file='data/preddiv.RData')

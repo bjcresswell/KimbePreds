@@ -1,0 +1,255 @@
+---
+title: "Kimbe Predator Graphics"
+author: "Ben Cresswell"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+ html_document:
+    code_folding: show
+    collapse: no
+    df_print: paged
+    fig_caption: yes
+    #fig_asp: 1.6
+    #fig_width: 105/25.4
+    highlight: textmate
+    theme: spacelab
+    toc: yes
+    toc_float: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+Last edit 18 Oct 2023 BJC for exit seminar
+
+```{r setup, include=TRUE, warnings=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.width = ggplot2::unit(120/25.4,"in"), fig.height = ggplot2::unit(75/25.4,"in"))
+#rm(list=ls())
+getwd()
+```
+
+
+# Load relevant packates
+```{r packages}
+library(readxl)
+library(grid)
+library(gridExtra)
+library(ggpubr)
+library(sjPlot)
+library(cowplot)
+library(patchwork)
+library(tidyverse)
+source('code/extras.R')
+getwd()
+```
+
+
+
+
+# Abundance
+```{r abun-plot-data}
+# Load data
+load("data/abunplotdata.RData")
+
+# Tweak labels so figure looks nice
+abunplotdata <- 
+abunplotdata %>% 
+  mutate(Contrast = recode_factor(Contrast,
+                                         `Pinnacle - Offshore` = 'P-O',
+                                         `Pinnacle - Nearshore` = 'P-N',
+                                         `Offshore - Nearshore` = 'O-N'),
+         Reeftype = dplyr::recode(Reeftype,
+                                         `Pinnacle` = 'P',
+                                         `Offshore` = 'O',
+                                         `Nearshore` = 'N'))
+```
+
+
+# Create abundance emmeans figure
+```{r abun-plot-make1, fig.width=60/25.4, fig.height=40/25.4}
+abun_emmeans <- 
+  ggplot(abunplotdata, aes(y=Mean,  x=Reeftype)) +
+  ylab('Abundance (n)')+
+  xlab('Reef type')+
+  geom_linerange(aes(ymin = MeanLowerCI95, ymax = MeanUpperCI95),  linewidth = 0.5)+
+  geom_point(aes(shape = Reeftype, fill= Reeftype), colour="black", size = 4)+
+  scale_shape_manual(values=c(24, 21, 22))+                       # had to adapt Kimbe pch scheme
+  scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D"))+
+  theme_bjc()+
+  theme(legend.position = "none")+
+  theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent"))
+
+abun_emmeans
+```
+
+
+# Save abundance emmeans figure
+```{r abun-plot-save1}
+ggsave(abun_emmeans, filename= 'output/rfigures/pce_figs/abun_emmeans.pdf', height = 40, width = 60, device = cairo_pdf, units = "mm", dpi = 300)
+```
+
+
+# Create abundance contrasts figure
+```{r abun-plot-make2, fig.width=60/25.4, fig.height=40/25.4}
+abun_contrasts <- 
+  ggplot(abunplotdata, aes(y=Estimate,  x=Contrast)) +
+  geom_linerange(aes(ymin = contrastlowerCI95,  ymax = contrastupperCI95), size = 0.5) +
+  geom_point(colour="black", size = 4)+
+  geom_hline(yintercept = 0, linetype='dashed') +
+  scale_y_continuous(position = "right")+
+  ylab('') +
+  theme_bjc()+
+  theme(legend.position = "none")+
+  theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent"))
+
+abun_contrasts
+```
+
+# Save abundance contrasts figure
+```{r abun-plot-save2}
+ggsave(abun_contrasts, filename= 'output/rfigures/pce_figs/abun_contrasts.pdf', height = 40, width = 60, device = cairo_pdf, units = "mm", dpi = 300)
+```
+
+
+
+# Biomass
+```{r biom-plot-data}
+# Load data
+load(file='data/biomplotdata.RData')
+
+# Tweak labels so figure looks nice
+biomplotdata <- 
+biomplotdata %>% 
+  mutate(Contrast = recode_factor(Contrast,
+                                         `Pinnacle - Offshore` = 'P-O',
+                                         `Pinnacle - Nearshore` = 'P-N',
+                                         `Offshore - Nearshore` = 'O-N'),
+         Reeftype = dplyr::recode(Reeftype,
+                                         `Pinnacle` = 'P',
+                                         `Offshore` = 'O',
+                                         `Nearshore` = 'N'))
+```
+
+
+# Create biomass emmeans figure
+```{r biom-plot-make1, fig.width=60/25.4, fig.height=40/25.4}
+biom_emmeans <- 
+  ggplot(biomplotdata, aes(y=Mean,  x=Reeftype)) +
+  ylab('Biomass (kg)')+
+  xlab('Reef type')+
+  geom_linerange(aes(ymin = MeanLowerCI95, ymax = MeanUpperCI95),  size = 0.5)+
+  geom_point(aes(shape = Reeftype, fill= Reeftype), colour="black", size = 4)+
+  scale_shape_manual(values=c(24, 21, 22))+                       # had to adapt Kimbe pch scheme
+  scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D"))+
+  theme_bjc()+
+  theme(legend.position = "none")+
+  theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent"))
+
+biom_emmeans
+```
+
+
+# Save biomass emmeans figure
+```{r biom-plot-save1}
+ggsave(biom_emmeans, filename= 'output/rfigures/pce_figs/biom_emmeans.pdf', height = 40, width = 60, device = cairo_pdf, units = "mm", dpi = 300)
+```
+
+
+# Biomass contrasts figure
+```{r biom-plot-make2, fig.width=60/25.4, fig.height=40/25.4}
+biom_contrasts <- 
+  ggplot(biomplotdata, aes(y=Estimate,  x=Contrast)) +
+  geom_linerange(aes(ymin = contrastlowerCI95,  ymax = contrastupperCI95), size = 0.5) +
+  geom_point(colour="black", size = 4)+
+  geom_hline(yintercept = 0, linetype='dashed') +
+  scale_y_continuous(position = "right")+
+  ylab('') +
+  xlab('Contrast')+
+  theme_bjc()+
+  theme(legend.position = "none")+
+  theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent"))
+
+biom_contrasts
+```
+
+
+# Save biomass contrasts plot
+```{r biom-plot-save2}
+ggsave(biom_contrasts, filename= 'output/rfigures/pce_figs/biom_contrasts.pdf', height = 40, width = 60, device = cairo_pdf, units = "mm", dpi = 300)
+```
+
+
+
+# Shannon Weiner diversity
+```{r shannon-plot-data}
+# Load data
+load("data/shanplotdata.RData")
+
+# Tweak labels so figure looks nice
+shanplotdata <- 
+shanplotdata %>% 
+  mutate(Contrast = recode_factor(Contrast,
+                                         `Pinnacle - Offshore` = 'P-O',
+                                         `Pinnacle - Nearshore` = 'P-N',
+                                         `Offshore - Nearshore` = 'O-N'),
+         Reeftype = dplyr::recode(Reeftype,
+                                         `Pinnacle` = 'P',
+                                         `Offshore` = 'O',
+                                         `Nearshore` = 'N'))
+```
+
+
+# Create Shannon emmeans figure
+```{r shannon-plot-make1, fig.width=60/25.4, fig.height=40/25.4}
+shan_emmeans <- 
+  ggplot(shanplotdata, aes(y=Mean,  x=Reeftype)) +
+  ylab('Diversity (H)') +
+  xlab('Reef type') +
+  geom_linerange(aes(ymin = MeanLowerCI95, ymax = MeanUpperCI95),  size = 0.5) +
+  geom_point(aes(shape = Reeftype, fill= Reeftype), colour="black", size = 4) +
+  scale_shape_manual(values=c(24, 21, 22)) +                       # had to adapt Kimbe pch scheme
+  scale_fill_manual(values=c("#35978F","#436EEE","#DFC27D")) +
+  theme_bjc()+
+  theme(legend.position = "none")+
+  theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent"))
+
+shan_emmeans
+```
+
+
+
+# Save Shannon emmeans figure
+```{r shannon-plot-save1}
+ggsave(shan_emmeans, filename= 'output/rfigures/pce_figs/shan_emmeans.pdf', height = 40, width = 60, device = cairo_pdf, units = "mm", dpi = 300)
+```
+
+
+
+# Create contrasts figure
+```{r shannon-plot-make2, fig.width=60/25.4, fig.height=40/25.4}
+shan_contrasts <- 
+  ggplot(shanplotdata, aes(y=Estimate,  x=Contrast)) +
+  geom_linerange(aes(ymin = contrastlowerCI95,  ymax = contrastupperCI95), size = 0.5) +
+  geom_point(colour="black", size = 4)+
+  geom_hline(yintercept = 0, linetype='dashed') +
+  scale_y_continuous(position = "right")+
+  ylab('') +
+  xlab('Contrasts')+
+  theme_bjc()+
+  theme(legend.position = "none")+
+  theme(axis.line = element_blank(), panel.border = element_rect(size = 1, fill = "transparent"))
+
+shan_contrasts
+```
+
+
+# Save Shannon contrasts figure
+```{r shannon-plot-save2}
+ggsave(shan_contrasts, filename= 'output/rfigures/pce_figs/shan_contrasts.pdf', height = 40, width = 60, device = cairo_pdf, units = "mm", dpi = 300)
+```
+
+
+```{r}
+# END #
+```
+
+
+

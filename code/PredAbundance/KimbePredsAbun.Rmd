@@ -224,11 +224,11 @@ summary(pred.glmmnb4)
 
 
 ```{r abun-nb-eda}
-emmeans(pred.glmmnb, pairwise~Reeftype, transform="response") %>% 
+emmeans(pred.glmmnb, pairwise~Reeftype, type="response") %>% 
   confint()
-emmeans(pred.glmmnb2, pairwise~Reeftype, transform="response") %>% 
+emmeans(pred.glmmnb2, pairwise~Reeftype, type="response") %>% 
   confint()
-emmeans(pred.glmmnb4, pairwise~SurvCode, transform="response") %>% 
+emmeans(pred.glmmnb4, pairwise~SurvCode, type="response") %>% 
   confint()
 ```
 -> So emmeans suggest that pinnacles have more predators than both offshore emergent and near shore reefs, but that this is highly variable.  What about if we take into account overall abundance for whole fish communities?
@@ -259,7 +259,7 @@ summary(pred.glmmnboff)
 ```
 
 ```{r}
-emmeans(pred.glmmnboff, pairwise ~ Reeftype, transform='response', combine=TRUE) %>%
+emmeans(pred.glmmnboff, pairwise ~ Reeftype, type='response', combine=TRUE) %>%
   confint()
 ```
 
@@ -268,7 +268,7 @@ emmeans(pred.glmmnboff, pairwise ~ Reeftype, transform='response', combine=TRUE)
 ```{r abun-emmeans-results}
 # emmeans and contrasts first
 abuncontrasts <- 
-  emmeans(pred.glmmnboff, pairwise ~ Reeftype, transform='response', combine=TRUE) %>%
+  emmeans(pred.glmmnboff, pairwise ~ Reeftype, type='response', combine=TRUE) %>%
   confint() %>% 
   as.data.frame() 
 

@@ -60,7 +60,7 @@ library(effects)   #for partial effects plots
 library(ggeffects) #for partial effects plots
 library(emmeans)   #for estimating marginal means
 library(modelr)    #for auxillary modelling functions
-library(artyfarty) #for plotting
+#library(artyfarty) #for plotting
 library(vegan)
 library(MuMIn)     #for pseudo R2
 library(tidyverse) #for data wrangling
@@ -72,7 +72,8 @@ library(tidyverse) #for data wrangling
 ## Diversity data wrangling script
 Generates a master-diversity data frame which includes diversity metrics and a species matrix
 ```{r pred-div-diw, warning=FALSE, include=FALSE, echo=TRUE}
-source("pred_div_diw.R", local = knitr::knit_global())
+getwd()
+source("code/PredDiversity/pred_div_diw.R", local = knitr::knit_global())
 ```
 
 
@@ -423,7 +424,7 @@ pshan.glmmT %>% ranef()
 ## emmeans
 Calculate estimated marginal means of Shannon diversity index per reef type:
 ```{r shan-emmeans}
-emmeans(pshan.glmmT, ~Reeftype, transform="response") %>% 
+emmeans(pshan.glmmT, ~Reeftype, type="response") %>% 
   #confint() #%>% 
   as.tibble() #%>% 
   #tab_df() #tab_df for HTML export
@@ -443,7 +444,7 @@ pshan.glmmT %>%
 ```{r shan-emmeans-otherways, eval=FALSE, include=FALSE, echo=FALSE, warning=FALSE, cache=FALSE, message=FALSE}
 # emmeans and contrasts first
 pshan.glmmT %>% 
-  emmeans(pairwise ~ Reeftype, transform='response') %>%
+  emmeans(pairwise ~ Reeftype, type='response') %>%
   confint() %>% 
   as.data.frame() 
 

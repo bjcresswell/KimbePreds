@@ -37,7 +37,7 @@ getwd()
 ```{r housekeep}
 #rm(list=ls())
 graphics.off()
-theme_set(theme_classic(base_family = "Helvetica", base_size = 9)) 
+theme_set(theme_classic(base_family = "Arial", base_size = 9)) 
 ```
 
 
@@ -130,13 +130,13 @@ pred.plot<-cbind(predmatrix, NMDS1, NMDS2) %>%
 
 ### And plot
 ```{r mds-plot1}
-theme_set(theme_classic(base_family = "Helvetica", base_size = 5))
+theme_set(theme_classic(base_family = "Arial", base_size = 5))
 
 ggplot(pred.plot, aes(NMDS1, NMDS2, color=Reeftype))+
   geom_point(position=position_jitter(.1), shape=3)+##separates overlapping points
   #geom_text(aes(label = TID))+
-  stat_ellipse(type='t',size =1)#+ ##draws 95% confidence interval ellipses
-  theme_minimal()
+  stat_ellipse(type='t',size =1) + ##draws 95% confidence interval ellipses
+  theme_bjc()
 
 ```
 
@@ -204,11 +204,16 @@ species.labels <- species.scores %>%
 species.labels
 ```
 
-
-
+# Coords for labels
 ```{r}
-Coord_1 <- c(-1.55,	-1.5,	  -6.2,	  -3,	   -1.2,   -0.5)
-Coord_2 <- c(0.4,	 -0.3,	 -0.5,    0.3,	  0.8,	 -0.2)
+Coord_1 <- c(-1.6,	-1.5,	  -6.3,	 -3.1,	   -1.1,   -0.5)
+Coord_2 <- c(0.5,	 -0.3,	 -0.6,    0.2,	  1.0,	 -0.2)
+```
+
+# Coords to go with species names
+```{r}
+#Coord_1 <- c(-1.55,	-1.9,	  -6.1,	  -4.8,	 -1.2,   0.6)
+#Coord_2 <- c(0.5,	 -0.5,	 -0.8,    0.3,	  1.0,	 -0.2)
 ```
 
 
@@ -233,52 +238,52 @@ shannon <- env %>%
 
 data.scores <- data.scores %>% 
   full_join(shannon, by = "TID")
-head(data.scores)  #look at the data
+#head(data.scores)  #look at the data
 ```
 
+# Plot for exit seminar
 
-# Plot
-
-```{r fig.height = 65/25.4, fig.width = 105/25.4}
+```{r fig.height = 87/25.4, fig.width = 140/25.4}
 pred_nmds_plot <-
   ggplot(data.scores, aes(NMDS1, NMDS2)) + # Each individual TID score in NMDS space
-  geom_point(aes(colour = grp, shape = grp), alpha=0.6, position=position_jitter(.1)) +  # grouping by reef type (grp)
-  geom_point(aes(colour = grp, shape = grp), alpha=0.6, position=position_jitter(.1)) +  # or could even include scale by Shannon score
-  xlim(-11, 3)+
+  geom_hline(yintercept = 0, linetype=2, alpha=0.3) +     # 0 on y axis
+  geom_vline(xintercept = 0, linetype=2, alpha=0.3) +     # 0 on x axis
+  stat_ellipse(geom = "polygon", aes(colour = grp, fill = grp), alpha=0.2, level = 0.95, type='t',size =0.95, show.legend = FALSE) +          # 95% conf ellipses
+  geom_point(aes(colour = grp, fill = grp, shape = grp), alpha=0.8, size = 3) +  # or could even include scale by Shannon score
+  xlim(-7, 3)+
   ylim(-3, 3)+
-  scale_color_manual(values=c("#DFC27D", "#436EEE", "#35978F"))+ # The classic Kimbe colour scheme
+  scale_color_manual(values=c("#DFC27D", "#436EEE", "#35978F"),)+ # The classic Kimbe colour scheme
   scale_fill_manual(values=c("#DFC27D", "#436EEE", "#35978F"))+ # The classic Kimbe colour scheme
   scale_shape_manual(values=c(16, 8, 17))+                       # and classic Kimbe pch scheme
-  stat_ellipse(geom = "polygon", aes(colour = grp, fill = grp), alpha=0.1, type='t',size =0.8) +          # 95% conf ellipses
-  stat_ellipse(aes(colour = grp), alpha=1, type='t',size =0.8) +          # 95% conf ellipses
   #geom_point(data = species.scores, aes(NMDS1, NMDS2), pch = 15, size = 2, position=position_jitter(0.1)) + # Pts for Spp scores for top 6 taxa
   geom_text(data = species.labels, aes(coord_1, coord_2, label = label2), size = 4, fontface = "italic", ) + # Text for these           
   geom_segment(data = species.scores, aes(x = 0, y = 0, xend = NMDS1, yend = NMDS2),              # And arrows
                arrow = arrow(length = unit(0.2, 'cm'), type = "closed"), colour = "grey30", arrow.fill = "grey30", alpha = 0.8) +
   #geom_text(aes(label = TID), size = 2)+  
-  geom_hline(yintercept = 0, linetype=2, alpha=0.3) +     # 0 on y axis
-  geom_vline(xintercept = 0, linetype=2, alpha=0.3) +     # 0 on x axis
- # theme_classic()+                        # White fill
+  theme_bjc()+                        # White fill
   theme(
     axis.line = element_blank(), 
-    axis.text = element_text(family = "Helvetica", size = 9),
-    axis.title = element_text(family = "Helvetica", size = 9),
+    #axis.text = element_text(family = "Arial", size = 9),
+    #axis.title = element_text(family = "Arial", size = 9),
     panel.border = element_rect(size = 1, fill = "transparent"),
+    panel.grid = element_blank(),
     legend.title = element_blank(),
-    legend.text = element_text(family = "Helvetica", size = 9),
-    legend.position = c(.14,.14),
+    legend.text = element_text(family = "Arial", size = 9),
+    legend.position = c(0.12, 0.12),
     legend.background = element_rect(fill = "transparent"),
     legend.box.background = element_rect(fill = 'transparent', colour = "black"),
     legend.spacing.y = unit(0.1, "mm"),
-    legend.key.size = unit(1, "mm")
+    legend.key.size = unit(1, "mm"),
+    legend.key = element_blank()
     )
 
 
 pred_nmds_plot
+```
 
-ggsave(pred_nmds_plot, filename= '../../output/rfigures/prednmds3.pdf',  width = 105, height = 65, units = "mm", dpi = 300)
-#ggsave(pred_nmds_plot, filename= '../../output/rfigures/prednmds.svg',  device = 'svg' , width = 105, height = 66, units = "mm", dpi = 600)
 
+```{r}
+ggsave(pred_nmds_plot, filename= 'output/rfigures/pce_figs/prednmds_pce.pdf', device = cairo_pdf,  width = 140, height = 87, units = "mm", dpi = 300)
 ```
 
 

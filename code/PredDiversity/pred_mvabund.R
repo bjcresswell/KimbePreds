@@ -20,9 +20,10 @@ library(tidyverse)
 
 # Setwd
 setwd("/Users/bjcresswell/OneDrive - James Cook University/Ben PhD/Data & analysis/KimbePreds/code/PredDiversity")
+getwd()
 
 # Start with predator diversity df - preddiv
-load(file='../../data/preddiv.RData')
+load(file='data/preddiv.RData')
 # This is a classic species count table with:
 # Sites/transects as rows (120 transects)
 # Species counts as columns (63 separate taxa in this dataset)
@@ -57,7 +58,6 @@ meanvar <- meanvar.plot(predabund)
 
 specabuntran <- plot(predabund~predenv$Reeftype) # By default applies log transformation, gives you top 10-12. Without transformation you get:
 #specabun <- plot(predabund~preddiv$Reeftype, transformation="no")
-
 
 
 # 3. Model fitting
@@ -108,7 +108,6 @@ control <- how(within = Within(type = 'none'),
                plots = Plots(strata = predenv$Site, type = 'free'),
                nperm = 999)
 permutations <- shuffleSet(nrow(predenv), control = control)
-
 
 # Pairwise comparisons (uni and multivariate) extracted using anova.manyglm function:
 

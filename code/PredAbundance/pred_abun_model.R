@@ -25,7 +25,7 @@ library(tidyverse) #for data wrangling
 # Load data
 getwd()
 setwd("code/PredAbundance")
-load('../../data/predsum.RData')
+load('data/predsum.RData')
 head(predsum)
 glimpse(predsum)
 

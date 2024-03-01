@@ -108,7 +108,7 @@ spp_list <- list(`Pinnacle (53)` = factor(P$Taxa),
 
 predvenn <- ggvenn(spp_list, show_percentage = FALSE, 
        fill_color = c("#35978F", "#DFC27D", "#436EEE"),
-       fill_alpha = 0.5,
+       fill_alpha = 0.9,
        stroke_color = "black",
        stroke_alpha = 1,
        stroke_size = 0.6,
@@ -125,7 +125,7 @@ predvenn
 
 #ggsave(predvenn, filename= 'output/rfigures/predvenn.svg', width=40,  height=40, units = "mm", dpi = 300 ) # SVG is for Inkscape editing :(
 #ggsave(predvenn, filename= '../../output/rfigures/predvenn2.png', width=40,  height=40, units = "mm", dpi = 1000 )
-ggsave(predvenn, filename= 'output/rfigures/predvenn.pdf', width=40,  height=40, units = "mm", dpi = 300 ) 
+ggsave(predvenn, filename= 'output/rfigures/predvenn.pdf', width=50,  height=50, units = "mm", dpi = 300 ) 
 
 library(OpenImageR)
 
